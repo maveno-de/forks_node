@@ -1,0 +1,298 @@
+---
+
+#TODO: Requirement: alles was Prefix 'context' darf nicht als Fact gesetzt werden
+
+## Parameters
+
+# contextSystemUser
+
+# [contextProductOrganization]
+# [contextComponentIdentifier]
+# [contextProductLabel] (only for file/directory backup)
+
+# Data storage
+
+# Schema
+# product/<Host DN|VendorID>/<Hostname>.product.yml
+# product/<Host DN|VendorID>/<Component ID>/<Hostname>.<Component ID>.product.yml
+
+# contextProductStoreAction get|set|merge
+# contextProductData
+
+# File storage
+
+# Schema
+# product/<Host DN|VendorID>/files/
+# product/<Host DN|VendorID>/<Component ID>/files/
+
+# contextProductStoreAction backup|restore
+
+# contextProductDirectory
+
+
+  ## Assemble product path
+
+- name: Generate product file path
+  block:
+
+    - name: Generate product file path
+      set_fact: 
+        productFileDirectory: "product/{{ contextProductOrganization|default(mavenoHostDomainName) }}"
+    - set_fact:
+        productFileDirectory: "{{ productFileDirectory }}/{{ contextComponentIdentifier }}"
+      when: contextComponentIdentifier is defined
+
+    - set_fact:
+        productFilePathBase: "{{ productFileDirectory }}/{{ inventory_hostname }}"
+    - set_fact:
+        productFilePathBase: "{{ productFilePathBase }}.{{ contextComponentIdentifier }}"
+      when: contextComponentIdentifier is defined
+    - set_fact:
+        productFilePathBase: "{{ productFilePathBase }}.product"
+
+    - name: Ensure product file directory
+      delegate_to: localhost
+      file:
+        path: "{{ productFileDirectory }}"
+        state: directory
+        mode: 0700
+
+
+  ## Get data
+
+- name: Product Store / GET
+  when: contextProductStoreAction == 'get'
+  block:
+
+    - name: Check if product file exists
+      delegate_to: localhost
+      stat:
+        path: "{{ productFilePathBase }}.yml"
+      register: statResult
+      changed_when: false
+      
+    - name: Create empty decrypted product file if none exists
+      when: not statResult.stat.exists
+      delegate_to: localhost
+      shell: "echo '{}' > {{ productFilePathBase }}_decrypted.yml"
+      changed_when: false
+    
+    - name: Create copy of product file as working file if it exists
+      when: statResult.stat.exists
+      delegate_to: localhost
+      shell: "umask 0007 && cp {{ productFilePathBase }}.yml {{ productFilePathBase }}_decrypted.yml"
+      changed_when: false
+
+    - name: Decrypt working file
+      when: statResult.stat.exists
+      no_log: yes
+      delegate_to: localhost
+      vars:
+        vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
+      expect:
+        command: ansible-vault decrypt {{ productFilePathBase }}_decrypted.yml
+        responses:
+          "Vault password": "{{ vaultPassword }}"
+      changed_when: false
+
+    - name: Read product data and store into output variable
+      set_fact:
+        contextProductData: "{{ lookup('file', '{{ productFilePathBase }}_decrypted.yml')|from_yaml }}"
+
+  always:
+    - name: Delete working file
+      delegate_to: localhost
+      file: 
+        path: "{{ productFilePathBase }}_decrypted.yml"
+        state: absent
+      changed_when: false
+
+
+  ## Set/merge data
+
+- name: Product Store / {{ contextProductStoreAction|upper }}
+  when: > 
+    contextProductStoreAction == 'set'
+    or contextProductStoreAction == 'merge'
+  block:
+
+      # Check if product file exists
+    - name: Product Store / {{ contextProductStoreAction|upper }}
+      delegate_to: localhost
+      stat:
+        path: "{{ productFilePathBase }}.yml"      
+      changed_when: false
+      register: statResult
+
+      # Create empty decrypted product file if none exists 
+    - shell: "echo '{}' > {{ productFilePathBase }}_decrypted.yml"
+      when: not statResult.stat.exists
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Create copy of product file as working file if it exists
+      when: statResult.stat.exists
+      delegate_to: localhost
+      shell: "umask 0007 && cp {{ productFilePathBase }}.yml {{ productFilePathBase }}_decrypted.yml"
+      changed_when: false
+      
+    - name: Decrypt copy of product file
+      when: statResult.stat.exists
+      no_log: yes
+      delegate_to: localhost
+      vars:
+        vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
+      expect:
+        command: "ansible-vault decrypt {{ productFilePathBase }}_decrypted.yml"
+        responses:
+          "Vault password": "{{ vaultPassword }}"
+      changed_when: false
+
+
+      # Updating data in working file
+
+    - name: "Setting data for component {{ contextComponentIdentifier }}"
+      delegate_to: localhost
+      shell: "echo '{{ lookup('file', '{{ productFilePathBase }}_decrypted.yml')|from_yaml|combine(contextProductData, recursive=True)|to_nice_yaml }}' > {{ productFilePathBase }}_decrypted.yml"
+      changed_when: false
+      when: contextProductStoreAction == 'set'
+
+    - name: "Merging data for component {{ contextComponentIdentifier }}"
+      delegate_to: localhost
+      shell: "echo '{{ contextProductData|combine(lookup('file', '{{ productFilePathBase }}_decrypted.yml')|from_yaml, recursive=True)|to_nice_yaml }}' > {{ productFilePathBase }}_decrypted.yml"
+      changed_when: false
+      when: contextProductStoreAction == 'merge'
+
+      # Encrypt updated working file
+    - name: Encrypting
+      delegate_to: localhost
+      no_log: yes
+      vars:
+        vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
+      expect:
+        command: ansible-vault encrypt {{ productFilePathBase }}_decrypted.yml
+        responses:
+          "New Vault password": "{{ vaultPassword }}"
+          "Confirm New Vault password": "{{ vaultPassword }}"
+      changed_when: false
+
+      # Copy encrypted working file into product file
+    - name: Copy back
+      delegate_to: localhost
+      shell: "cp {{ productFilePathBase }}_decrypted.yml {{ productFilePathBase }}.yml"
+      changed_when: false
+
+  # Always delete working file
+  always:
+
+    - name: Delete
+      delegate_to: localhost
+      file: 
+        path: "{{ productFilePathBase }}_decrypted.yml"
+        state: absent
+      changed_when: false
+
+
+  ## Backup directory/file
+
+- name: Generate product archive name
+  when: >
+    contextProductStoreAction == 'backup'
+    or contextProductStoreAction == 'restore'
+  block:
+    - name: Create product archive name
+      set_fact:
+        productTarGzArchiveName: "{{ (contextProductDirectory | basename | replace('.','')) + '.product.tar.gz' }}"
+    - set_fact:
+        productTarGzArchiveName: "{{ contextProductLabel }}.{{ productTarGzArchiveName }}"
+      when: contextProductLabel is defined
+    - set_fact:
+        productTarGzArchiveName: "{{ contextComponentIdentifier }}.{{ productTarGzArchiveName }}"
+      when: contextComponentIdentifier is defined
+
+- name: Backup file or directory to product
+  when: contextProductStoreAction == 'backup'
+  block:
+
+    - name: Create temp directory for backup
+      become: yes
+      file:
+        state: directory
+        path: "{{ mavenoManagingHomeDirectory }}/.tmp/product/"
+        owner: "{{ mavenoManagingSystemUsername }}"
+        group: "{{ mavenoManagingSystemUsername }}"
+        mode: 0700
+
+    - name: Gzipping directory
+      become: yes
+      archive:
+        path: "{{ contextProductDirectory }}"
+        dest: "{{ mavenoManagingHomeDirectory }}/.tmp/product/{{ productTarGzArchiveName }}"
+        format: gz
+        owner: "{{ mavenoManagingSystemUsername }}"
+        group: "{{ mavenoManagingSystemUsername }}"
+        mode: 0700
+
+    - name: Fetch zipped file/directory
+      become: yes
+      become_user: "{{ mavenoManagingSystemUsername }}"
+      fetch:
+        src: "{{ mavenoManagingHomeDirectory }}/.tmp/product/{{ productTarGzArchiveName }}"
+        dest: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
+        flat: yes
+
+      #TODO: Fetched file still owned by root
+      #TODO: AvA
+    - name: Set permissions on fetched product file
+      when: ansible_user != 'root'
+      delegate_to: localhost
+      become: yes
+      file:
+        path: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
+        owner: "{{ lookup('env','USER') }}"
+        group: "{{ lookup('env','USER') }}"
+        mode: 0700
+
+    - name: Encrypt archived product file/directory
+      delegate_to: localhost
+      no_log: yes
+      vars:
+        vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
+      expect:
+        command: "ansible-vault encrypt \"{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}\""
+        responses:
+          "New Vault password": "{{ vaultPassword }}"
+          "Confirm New Vault password": "{{ vaultPassword }}"
+      changed_when: false
+
+  # Always delete remote temp direcory
+  always:
+
+    - name: Delete remote archive file
+      become: yes
+      file:
+        state: absent
+        path: "{{ mavenoManagingHomeDirectory }}/.tmp/product"
+
+
+  ## Restore directory/file
+
+- name: Restore file/directory from product
+  become: yes
+  when: contextProductStoreAction == 'restore'
+  unarchive:
+    src: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
+    dest: "{{ contextProductDirectory|dirname }}"
+
+- name: "Restore file/directory from product for user {{ contextSystemUser }}"
+  become: yes
+  when: 
+    - contextProductStoreAction == 'restore'
+    - contextSystemUser is defined
+  unarchive:
+    src: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
+    dest: "{{ contextProductDirectory|dirname }}"
+    owner: "{{ contextSystemUser }}"
+    group: "{{ contextSystemUser }}"
+
+...

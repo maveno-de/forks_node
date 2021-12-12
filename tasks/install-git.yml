@@ -1,0 +1,146 @@
+---
+
+
+- name: "Remove {{ forkIdentifier|capitalize }} application directory"
+  become: yes
+  file: 
+    path: "{{ forkApplicationDirectory }}"
+    state: absent
+
+
+- name: "Clone {{ forkIdentifier|capitalize }} blockchain repository into source directory"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  git:
+    dest: "{{ forkApplicationDirectory }}"
+    repo: "https://github.com/{{ forkBuildRequirementsDescriptor.repositoryIdentifier }}.git"
+    force: yes
+    update: yes
+    recursive: yes
+    version: "{{ forkBuildRequirementsDescriptor.branch|default('main') }}"
+
+- name: Make installer executable
+  become: yes
+  file: 
+    path: "{{ forkApplicationDirectory }}/install.sh"
+    mode: 0750
+
+
+- name: "Install {{ forkIdentifier|capitalize }} blockchain"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  shell: ./install.sh
+  args:
+    chdir: "{{ forkApplicationDirectory }}"
+    executable: /bin/sh
+  environment: "{{ ('buildEnvVars' in forkBuildRequirementsDescriptor.keys())|ternary(forkBuildRequirementsDescriptor.buildEnvVars, []) }}"
+  async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  poll: 0
+  register: installBlockchainJob
+
+- name: "Wait for {{ forkIdentifier|capitalize }} blockchain being installed"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  async_status:
+    jid: "{{ installBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  delay: 15
+
+- name: "Remove {{ forkIdentifier|capitalize }} system user from sudo group"
+  become: yes
+  shell: "deluser {{ forkSystemUsername }} sudo"
+
+
+  ## Fix permissions
+
+- name: "Fix {{ forkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
+  when: forkPermissionsFix
+  become: yes
+  file:
+    path: "{{ forkApplicationDirectory }}/mozilla-ca"
+    state: directory
+    recurse: yes
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: u=rwX,g=rX,o=rX
+
+- name: "Fix {{ forkIdentifier|capitalize }} ssl permissions"
+  when: forkPermissionsFix
+  become: yes
+  file:
+    path: "{{ forkConfigurationDirectory }}/mainnet/config/ssl"
+    state: directory
+    recurse: yes
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: u=rwX,g=,o=
+
+
+## Initialize blockchain
+
+- name: "Initialize {{ forkIdentifier|capitalize }} blockchain"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  shell: >
+    . {{ forkApplicationDirectory }}/venv/bin/activate &&
+    {{ forkExecutableName }} init
+    {% if not forkPermissionsFix %}--fix-ssl-permissions{% endif %}
+  args:
+    chdir: "{{ forkApplicationDirectory }}"
+    executable: /bin/bash
+  async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  poll: 0
+  register: initializeBlockchainJob
+
+- name: "Wait for {{ forkIdentifier|capitalize }} blockchain being initialized"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  async_status:
+    jid: "{{ initializeBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  delay: 15
+
+
+- name: "Store {{ forkIdentifier|capitalize }} CA cert in organization product"
+  when: "'farmer' in forkBuildRequirementsDescriptor.startOption"
+  vars:
+    contextProductStoreAction: backup
+    contextComponentIdentifier: "{{ mavenoForksComponentIdentifier }}"
+    contextProductOrganization: "{{ mavenoVendorIdentifier }}"
+    contextProductLabel: "ca_cert-{{ mavenoHostDomainName }}-{{ forkIdentifier }}"
+    contextProductDirectory: "{{ forkConfigurationDirectory }}/mainnet/config/ssl/ca"
+  include_tasks: productStore.yml
+  tags: certificates
+
+- name: "Generate {{ forkIdentifier|capitalize }} service file"
+  become: yes
+  template:
+    src: "fork-git.service.j2"
+    dest: "{{ mavenoSystemServiceDirectory }}/{{ forkServiceName }}.service"
+    force: yes
+    owner: root
+    group: root
+    mode: 0644
+
+
+- name: Link {{ forkIdentifier|capitalize }} blockchain directory in Forktools root directory
+  become: yes
+  file:
+    src: "{{ forkApplicationDirectory }}"
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.blockchain.root/{{ forkApplicationDirectory|basename }}"
+    state: link
+  tags: utilities
+
+- name: Link {{ forkIdentifier|capitalize }} configuration directory in Forktools root directory
+  become: yes
+  file:
+    src: "{{ forkConfigurationDirectory }}"
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.config.root/{{ forkConfigurationDirectory|basename }}"
+    state: link
+  tags: utilities
+
+...

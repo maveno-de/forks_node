@@ -1,0 +1,28 @@
+#!/bin/bash
+
+BACKUP_DIRECTORY={{ mavenoForksBackupDataDirectory }}
+
+TEXT_RED='\033[0;31m'
+TEXT_GREEN='\033[0;32m'
+TEXT_BLUE='\033[0;34m'
+TEXT_WHITE='\033[0m'
+
+
+# 1: username
+# 2: fork id
+# 3: config dir name
+#
+backupBaremetalNode() {
+    
+    systemctl stop "${1}"
+
+}
+
+backupDockerNode() {
+
+}
+
+#showFarmer <Farmer Service Name>
+# ...
+
+

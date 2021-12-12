@@ -1,0 +1,23 @@
+[Unit]
+Description="{{ forkIdentifier|capitalize }} Farming Node Service"
+After=network.target
+
+[Service]
+Type=forking
+RestartSec=15s
+Restart=always
+User={{ forkSystemUsername }}
+Group={{ forkSystemUsername }}
+
+WorkingDirectory={{ forkApplicationDirectory }}
+Environment=PATH={{ forkApplicationDirectory }}:{{ forkApplicationDirectory }}/venv/bin
+
+Environment=REQUESTS_CA_BUNDLE={{ mavenoSystemCaCertificatesFilePath }}
+Environment=SSL_CERT_DIR=/etc/ssl/certs
+
+#ExecStart=/{{ forkApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forkIdentifier) }} run_demon
+ExecStart={{ forkApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forkIdentifier) }} start {{ mavenoForksStartOptionLookupTable[forkBuildRequirementsDescriptor.startOption] }}
+ExecStop={{ forkApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forkIdentifier) }} stop all -d
+
+[Install]
+WantedBy=multi-user.target

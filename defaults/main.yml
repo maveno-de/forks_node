@@ -1,0 +1,5 @@
+---
+
+mavenoForksDockerInstallationOption: deb # apt|dep
+
+...

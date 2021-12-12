@@ -1,0 +1,98 @@
+---
+
+
+- name: Switch temporarily to system python
+  set_fact: 
+    tempPythonInterpreter: "{{ ansible_python_interpreter }}"
+- set_fact: 
+    ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
+###
+
+- debug:
+    msg: "{{ ansible_distribution_release }}" 
+
+
+  ## Installation per apt
+
+- name: Install Docker repo key
+  when: ansible_facts['os_family'] == 'Debian'
+  become: yes
+  apt_key:
+    url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/gpg"
+    state: present
+    keyring: /usr/share/keyrings/docker-archive-keyring.gpg
+
+- name: Get architecture from dpkg
+  when: ansible_facts['os_family'] == 'Debian'
+  shell: dpkg --print-architecture
+  register: dkpgArchitectureShellResult
+
+- name: Add Docker repository (Debian family)
+  when: ansible_facts['os_family'] == 'Debian'
+  become: yes
+  apt_repository:
+    repo: >
+      deb [arch={{ dkpgArchitectureShellResult.stdout }} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]
+      https://download.docker.com/linux/{{ ansible_distribution|lower }}
+      {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+
+- name: Install Docker system packages (Debian family)
+  when: ansible_facts['os_family'] == 'Debian'
+  become: yes
+  apt:
+    state: latest
+    pkg:
+
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+
+
+- name: Install Docker system packages for rootless mode (Debian family)
+  when: 
+    - ansible_facts['os_family'] == 'Debian'
+    - forkSystemUsername != ''
+  become: yes
+  apt:
+    state: latest
+    pkg: uidmap
+
+- name: Install RPi extra modules (Ubuntu 21.10 RPi)
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - >
+      ansible_distribution_version == '21.10'
+      or ansible_distribution_major_version > '21'
+    - "'raspi' in ansible_kernel"
+  become: yes
+  apt:
+    state: latest
+    pkg:
+
+      - linux-modules-extra-raspis
+
+###
+- name: Switch back to framework python venv
+  set_fact: 
+    ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+
+
+- name: Install slirp4netns
+  include_tasks: installSlirp4NetNs.yml
+
+- name: Install fuse-overlayfs
+  include_tasks: installFuseOverlayFs.yml
+
+
+- name: Stop and disable system docker service
+  become: yes
+  systemd:
+    name: docker.service
+    enabled: no
+    state: stopped
+    daemon_reload: yes
+
+
+...

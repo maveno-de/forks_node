@@ -1,0 +1,26 @@
+---
+
+
+- name: "Prepare {{ forkIdentifier|capitalize }} installation"
+  include_tasks: "prepare-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+  tags:
+    - utilities
+    - services
+    - certificates
+
+- name: "Install {{ forkIdentifier|capitalize }}"
+  include_tasks: "install-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+  tags:
+    - utilities
+    - services
+    - certificates
+
+- name: "Configure {{ forkIdentifier|capitalize }}"
+  include_tasks: "configure-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+  tags:
+    - utilities
+    - services
+    - certificates
+
+
+...

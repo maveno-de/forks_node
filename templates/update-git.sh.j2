@@ -1,0 +1,46 @@
+#!/bin/bash
+
+USER_NAME='{{ forkSystemUsername }}'
+SERVICE_NAME='{{ forkServiceName }}'
+EXECUTABLE_NAME='{{ forkExecutableName }}'
+HOME_DIR="{{ forkHomeDirectory }}"
+APP_DIR="{{ forkApplicationDirectory }}"
+CONFIG_DIR_NAME="{{ forkConfigurationDirectory|basename }}"
+GITHUB_REPO_IDENTIFIER='{{ forkBuildRequirementsDescriptor.repositoryIdentifier }}'
+GITHUB_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO_IDENTIFIER}/releases/latest"
+GITHUB_REPO_URL="https://github.com/${GITHUB_REPO_IDENTIFIER}.git"
+
+if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep Loaded: | awk '{print $4}') == 'enabled;' ]]; then
+
+    if [[ "${1}" != '--install' ]]; then
+        servicePreviousStatus=$(systemctl status "${SERVICE_NAME}" | grep Active: | awk '{print $2}')
+
+        su - "${USER_NAME}" -c "cd ${APP_DIR} && git fetch 1>/dev/null 2>&1"
+        CURRENT_COMMIT=$(su - "${USER_NAME}" -c "cd ${APP_DIR} && git rev-parse HEAD")
+        AVAILABLE_COMMIT=$(su - "${USER_NAME}" -c "cd ${APP_DIR} && git rev-parse origin/main")
+    fi
+
+    if  [[ "${1}" == '--force' ]] || [[ "${1}" == '--install' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" ]]; then
+        systemctl stop "${SERVICE_NAME}"
+        usermod -aG sudo "${USER_NAME}"
+        rm -rf "${APP_DIR}"
+        su - "${USER_NAME}" -c "git clone ${GITHUB_REPO_URL} ${APP_DIR}"
+        chmod 'ug+x' "${APP_DIR}/install.sh"
+        su - "${USER_NAME}" -c "cd ${APP_DIR} && ./install.sh"
+        deluser "${USER_NAME}" 'sudo'
+{% if forkPermissionsFix %}
+        su - "${USER_NAME}" -c "chmod go-rwx -R ${CONFIG_DIR_NAME}/mainnet/config/ssl"
+        su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init"
+{% else %}
+        su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init --fix-ssl-permissions"
+{% endif %}
+        if [[ "${1}" == '--force' ]] || [[ "${servicePreviousStatus}" == 'active' ]]; then
+            sleep 60
+            systemctl start "${SERVICE_NAME}"
+        fi
+        if [[ "${1}" == '--install' ]]; then
+            sleep 60
+            systemctl enable --now "${SERVICE_NAME}"
+        fi
+    fi
+fi

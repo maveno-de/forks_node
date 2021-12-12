@@ -1,0 +1,124 @@
+---
+
+
+- name: Update local CA certs
+  become: yes
+  shell: update-ca-certificates
+
+
+  #HINT: Stopping all running services to prevent timeouts
+  # when building due to cpu time consumption
+- name: Stop Chia fork services
+  when: forkBuildRequirementsDescriptor.buildOption == 'git'
+  vars:
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
+    forkIdentifier: "{{ forkItem }}"
+    forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
+  become: yes
+  systemd:
+    name: "{{ forkServiceName }}.service"
+    state: stopped
+  changed_when: false
+  failed_when: false
+  ignore_errors: yes
+  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop_control:
+    loop_var: forkItem
+
+
+- name: Adding aliases for showing temp and CPU clock to shell of managing user
+  when: >
+    ansible_lsb.id == 'Raspbian'
+    or 'raspi' in ansible_kernel and ansible_distribution == 'Ubuntu'
+  become: yes
+  lineinfile:
+    path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
+    line: "{{ forkCommandLineItem }}"
+    insertafter: '^#NON-INTERACTIVE.*'
+  loop:
+    - alias show_temp='watch -n 1 sudo vcgencmd measure_temp'
+    - alias show_clock='watch -n 1 sudo vcgencmd measure_clock arm'
+  loop_control:
+    loop_var: forkCommandLineItem
+  tags: utilities
+
+
+- name: Ensure local directories for managing user
+  become: yes
+  file:
+    path: "{{ mavenoManagingHomeDirectory }}/.local/{{ forkLocalDirectoryItem }}"
+    state: directory
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0750
+  loop:
+    - bin
+    - tmp
+    - opt
+    - lib/fork.blockchain.root
+    - lib/fork.config.root
+  loop_control:
+    loop_var: forkLocalDirectoryItem
+  tags: [utilities, services]
+
+  
+- name: Install Chia Loganalyzer executable
+  include_tasks: buildLogAnalyzer.yml
+
+
+- name: Switch temporarily to system python
+  set_fact: 
+    tempPythonInterpreter: "{{ ansible_python_interpreter }}"
+- set_fact: 
+    ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
+###
+
+- name: Install required apt packages
+  become: yes
+  apt:
+    pkg:
+      - acl
+      - git
+      - screen
+      - xz-utils
+      - sysstat
+    state: latest
+    cache_valid_time: 10800
+
+##
+- name: Switch back to framework python venv
+  set_fact: 
+    ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+
+
+- name: Enable performance enhancements for RPi4
+  include_tasks: enhancePerformance.yml
+
+
+## Backup
+
+- name: Ensure backup data directory
+  when: mavenoForksBackupDataDirectory is defined
+  become: yes
+  file:
+    path: "{{ mavenoForksBackupDataDirectory }}"
+    state: directory
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0700
+  tags: services
+
+- name: Generate backup script template
+  when: mavenoForksBackupDataDirectory is defined
+  become: yes
+  template:
+    src: backup-forks.sh.j2
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/backup-forks.sh"
+    force: yes
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0755
+  tags: services
+
+
+...

@@ -1,0 +1,27 @@
+---
+
+
+mavenoForksArchitectureLookupTable:
+  arm64: arm64
+  armhf: arm64
+  amd64: amd64
+
+mavenoForksPlatformLookupTable:
+  arm64: linux/arm64/v8
+  armhf: linux/arm64/v8
+  amd64: linux/amd64
+
+mavenoForksLogAnalyzerArchitectureLookupTable:
+  amd64: amd64
+  armhf: arm
+  arm64: arm
+
+mavenoForksStartOptionLookupTable:
+  fullnode+wallet: wallet
+  fullnode+farmer: farmer-no-wallet
+  wallet: wallet-only
+  harvester: harvester
+  fullnode: node
+
+
+...

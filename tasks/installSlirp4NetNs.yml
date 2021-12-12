@@ -1,0 +1,77 @@
+---
+
+
+  #HINT: 'anditat' matching english version 'Candidate' as well as german 'Kanditat'
+- name: Get slirp4netns version available from apt cache
+  become: yes
+  shell: apt-cache policy slirp4netns | grep andidat | grep -Eo '[^[:blank:]]+$' | grep -Eo '^[^-]+' | cat
+  register: slirp4netnsAvailableVersionShellResult
+
+
+- name: Install latest static version of slirp4netns executable
+  when: >
+    slirp4netnsAvailableVersionShellResult.stdout == ''
+    or slirp4netnsAvailableVersionShellResult.stdout is version('1.0.0','<')
+  block:
+
+    - name: Set slirp4netns architecture lookup table
+      set_fact:
+        slirp4NetNsArchitectureLookupTable:
+          amd64: x86_64
+          armhf: armv7l
+          arm64: aarch64
+    
+      # Latest version result: slirp4netnsSourceGithubResult.recommended_version
+    - name: Determine slirp4netns latest release version
+      maveno_source_github:
+        owner: rootless-containers
+        repo: slirp4netns
+      environment:
+        SSL_CERT_DIR: /etc/ssl/certs
+        REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
+      register: slirp4netnsSourceGithubResult
+    
+    - name: Download and install latest static version of slirp4netns executable
+      become: yes
+      get_url:
+        url: "https://github.com/rootless-containers/slirp4netns/releases/download/v{{ slirp4netnsSourceGithubResult.recommended_version }}/slirp4netns-{{ slirp4NetNsArchitectureLookupTable[mavenoSystemArchitecture] }}"
+        dest: /usr/bin/
+        owner: root
+        group: root
+        mode: 0755
+      environment:
+        SSL_CERT_DIR: /etc/ssl/certs
+      register: getUrlResult
+      until: getUrlResult is success
+      retries: 10
+      delay: 30
+
+    - name: Rename slirp4netns executable
+      become: yes
+      shell: "mv \"{{ getUrlResult.dest }}\" /usr/bin/slirp4netns"
+
+
+- name: Install latest static vesion of slirp4netns
+  when: 
+    - slirp4netnsAvailableVersionShellResult.stdout != ''
+    - slirp4netnsAvailableVersionShellResult.stdout is version('1.0.0','>=')
+  block:
+
+    - name: Switch temporarily to system python
+      set_fact: 
+        tempPythonInterpreter: "{{ ansible_python_interpreter }}"
+    - set_fact: 
+        ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
+    ###
+    
+    - name: Install latest version of slirp4netns as apt package
+      become: yes
+      apt:
+        state: latest
+        pkg: slirp4netns
+        cache_valid_time: 10800
+    
+    ###
+    - name: Switch back to framework python venv
+      set_fact: 
+        ansible_python_interpreter: "{{ tempPythonInterpreter }}"

@@ -1,0 +1,203 @@
+---
+
+
+- name: "Ensure {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  user:
+    name: "{{ forkSystemUsername }}"
+    home: "{{ forkHomeDirectory }}"
+    groups: sudo
+    shell: /bin/bash
+    comment: "{{ forkIdentifier|capitalize }}"
+
+- name: Ensure remote temp dir for ansible
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.ansible/tmp"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0700
+
+- name: "Set permissions on {{ forkIdentifier|capitalize }} home directory"
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    recurse: yes
+    follow: no
+    mode: o=
+
+
+- name: Ensure .ssh directory for {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.ssh"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0700
+
+- name: "Adding SSH public keys to user {{ forkSystemUsername }}"
+  become: yes
+  authorized_key:
+    user: "{{ forkSystemUsername }}"
+    key: "{{ mavenoPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
+    exclusive: true
+
+
+- name: "Generate modified .bashrc for user {{ forkSystemUsername }}"
+  vars:
+    contextSystemUsername: "{{ forkSystemUsername }}"
+    contextHomeDirectory: "{{ forkHomeDirectory }}"
+    contextUserPaths: 
+      - "{{ forkApplicationDirectory }}"
+    contextNonInteractiveRules:
+      - ". {{ forkApplicationDirectory }}/venv/bin/activate"
+  include_tasks: generateBashRc.yml
+
+
+- name: "Ensure local shared directory for user {{ forkSystemUsername }}"
+  become: yes
+  file:
+    path: "{{ forkSharedDirectory }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0750
+
+- name: "Ensure local binary directory for user {{ forkSystemUsername }}"
+  become: yes
+  file:
+    path: "{{ forkBinaryDirectory }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0750
+
+- name: "Ensure local binary directory for user {{ forkSystemUsername }}"
+  become: yes
+  file:
+    path: "{{ forkBinaryDirectory }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0750
+
+
+- name: "Install additional apt packages for {{ forkIdentifier|capitalize }}"
+  when: "'aptPackages' in forkBuildRequirementsDescriptor.keys()"
+  block:
+
+    - name: Switch temporarily to system python
+      set_fact: 
+        tempPythonInterpreter: "{{ ansible_python_interpreter }}"
+    - set_fact: 
+        ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
+    ###
+
+    - name: "Install additional apt packages for {{ forkIdentifier|capitalize }}"
+      become: yes
+      apt:
+        pkg: "{{ forkBuildRequirementsDescriptor.aptPackages }}"
+        state: latest
+        cache_valid_time: 10800
+
+    ###
+    - name: Switch back to framework python venv
+      set_fact: 
+        ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+
+
+## Backup
+
+- name: "Ensure {{ forkIdentifier|capitalize }} backup data directory"
+  when: mavenoForksBackupDataDirectory is defined
+  become: yes
+  file:
+    path: "{{ mavenoForksBackupDataDirectory }}/{{ forkIdentifier }}"
+    state: directory
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0700
+
+
+
+## Active farmers
+
+- name: Generate farmer status script
+  when:
+    - not forkFarmerStatusScriptCreated is defined
+    - "'farmer' in forkBuildRequirementsDescriptor.startOption"
+  become: yes
+  template:
+    src: show_farmers.sh.j2
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/show_farmers.sh"
+    force: yes
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0755
+  tags: utilities
+
+- name: Adding alias for showing active farmers to shell of managing user
+  when:
+    - not forkFarmerStatusScriptCreated is defined 
+    - "'farmer' in forkBuildRequirementsDescriptor.startOption"
+  become: yes
+  lineinfile:
+    path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
+    line: "alias show_farmers=\"{{ mavenoManagingHomeDirectory }}/.local/bin/show_farmers.sh\""
+    insertafter: '^#NON-INTERACTIVE.*'
+  tags: utilities
+
+- set_fact:
+    forkFarmerStatusScriptCreated: yes
+  when: "'farmer' in forkBuildRequirementsDescriptor.startOption"
+  tags: utilities
+
+
+## Node performance
+
+- name: Generate node performance script
+  when:
+    - not forkNodePerformanceScriptCreated is defined 
+    - "'fullnode' in forkBuildRequirementsDescriptor.startOption"
+  become: yes
+  template:
+    src: node_performance.py.j2
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py"
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0750
+  tags: utilities
+
+- set_fact:
+    forkNodePerformanceScriptCreated: yes
+  when: "'fullnode' in forkBuildRequirementsDescriptor.startOption"
+  tags: utilities
+
+## Wallet kicker
+
+- name: Generate wallet kicker script template
+  when: 
+    - not forkWalletKickerScriptGitCreated is defined
+    - "'wallet' in forkBuildRequirementsDescriptor.startOption"
+  become: yes
+  template:
+    src: wallet-kicker-git.sh.j2
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-git.sh"
+    force: yes
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0755
+  tags: services
+
+- set_fact:
+    forkWalletKickerScriptGitCreated: yes
+  when: "'wallet' in forkBuildRequirementsDescriptor.startOption"
+  tags: services
+
+
+...

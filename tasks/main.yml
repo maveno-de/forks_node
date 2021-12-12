@@ -1,0 +1,66 @@
+---
+
+
+- name: Prepare Chia forks installation
+  include_tasks: prepare.yml
+  tags:
+    - utilities
+    - services
+
+  #HINT: Referencing vars in vars here
+- name: Build Chia forks
+  vars:
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
+    forkIdentifier: "{{ forkItem }}"
+    forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
+    forkSystemUsername: "{{ forkBuildRequirementsDescriptor.systemUsername|default(forkIdentifier) }}"
+    forkHomeDirectory: "{{ forkBuildRequirementsDescriptor.homeDirectory|default(mavenoVariableDirectory+'/'+forkSystemUsername) }}"
+    forkConfigurationDirectory: "{{ forkHomeDirectory }}/{{ forkBuildRequirementsDescriptor.configurationDirectoryName|default('.'+forkIdentifier) }}"
+    forkBinaryDirectory: "{{ forkHomeDirectory }}/.local/bin"
+    forkSharedDirectory: "{{ forkHomeDirectory }}/.local/share"
+    forkApplicationDirectoryName: "{{ forkBuildRequirementsDescriptor.repositoryIdentifier | regex_search('[^/]+$') }}"
+    forkApplicationDirectory: "{{ forkHomeDirectory }}/.local/share/{{ forkApplicationDirectoryName }}"
+    forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
+    forkExecutableName: "{{ forkBuildRequirementsDescriptor.executableName|default(forkIdentifier) }}"
+    forkPermissionsFix: "{{ (forkBuildRequirementsDescriptor.permissionsFix|default(false))|bool }}"
+  include_tasks: buildFork.yml
+  tags:
+    - utilities
+    - services
+    - certificates
+  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop_control:
+    loop_var: forkItem
+
+- name: Configure Chia forks installation
+  include_tasks: configure.yml
+  tags:
+    - utilities
+    - services
+
+
+  #HINT: Starting Chia fork services the latest possible to prevent timeouts
+  # when building due to cpu time consumption
+- name: "Start {{ forkIdentifier|capitalize }} service"
+  when: forkBuildRequirementsDescriptor.buildOption == 'git'
+  vars:
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
+    forkIdentifier: "{{ forkItem }}"
+    forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
+    forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
+  become: yes
+  systemd:
+    name: "{{ forkServiceName }}.service"
+    daemon-reload: yes
+    enabled: "{{ forkEnabled }}"
+    state: "{{ forkEnabled|ternary('restarted', 'stopped') }}"
+  changed_when: false
+  failed_when: false
+  ignore_errors: yes
+  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop_control:
+    loop_var: forkItem
+  tags: certificates
+
+
+...

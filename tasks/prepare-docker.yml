@@ -1,0 +1,224 @@
+---
+
+
+  #RESULT: forkUserIdShellResult.stdout
+- name: "Get uid of {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  shell: "id -u {{ forkSystemUsername }} | cat"
+  changed_when: false
+  register: forkUserIdShellResult
+  tags: certificates
+
+
+  #HINT: Stopping all running containers to prevent timeouts
+  # when building due to cpu time consumption
+- name: "Remove rootless docker service for user {{ forkSystemUsername }}"
+  when: forkUserIdShellResult.stdout != ''
+  include_tasks: remove-rootless.yml
+
+
+- name: Prepare rootless docker service
+  when: not forkRootlessDockerIsPrepared is defined
+  include_tasks: "prepare-rootless-{{ mavenoForksDockerInstallationOption }}.yml"
+  
+- name: Set docker rootless prepared status
+  set_fact:
+    forkRootlessDockerIsPrepared: yes
+
+
+- name: "Create {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  user:
+    name: "{{ forkSystemUsername }}"
+    home: "{{ forkHomeDirectory }}"
+    comment: "{{ forkIdentifier|capitalize }}"
+    shell: /bin/bash
+
+     # Due to ansible warning
+- name: Ensure remote temp dir for ansible
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.ansible/tmp"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0700
+
+- name: "Set permissions on {{ forkIdentifier|capitalize }} home directory"
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    recurse: yes
+    follow: no
+    mode: o=
+
+
+
+- name: "Generate .bashrc for {{ forkIdentifier|capitalize }} system user"
+  vars:
+    contextSystemUsername: "{{ forkSystemUsername }}"
+    contextHomeDirectory: "{{ forkHomeDirectory }}"
+    contextRemoveExistingFile: yes
+  include_tasks: generateBashRc.yml
+
+- name: Ensure .ssh directory for {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.ssh"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0700
+
+- name: "Adding SSH public keys to user {{ forkSystemUsername }}"
+  become: yes
+  authorized_key:
+    user: "{{ forkSystemUsername }}"
+    key: "{{ mavenoPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
+    exclusive: true
+
+
+- name: "Ensure {{ forkIdentifier|capitalize }} local directories"
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.local/{{ forkLocalDirectoryItem }}"
+    state: directory
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0750
+  loop:
+    - share
+    - bin
+  loop_control:
+    loop_var: forkLocalDirectoryItem
+
+  #RESULT: forkUserIdShellResult.stdout
+- name: "Get uid of {{ forkIdentifier|capitalize }} system user"
+  become: yes
+  shell: "id -u {{ forkSystemUsername }}"
+  changed_when: false
+  register: forkUserIdShellResult
+  tags: certificates
+
+
+## rootless Docker
+
+- name: Add Docker environment variables to context system user
+  vars:
+    contextBashRcFilePath: "{{ forkHomeDirectory }}/.bashrc"
+    contextNonInteractiveRules:
+      - export XDG_RUNTIME_DIR=/run/user/$(id -u)
+      - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
+  include_tasks: addNonInteractiveRulesToBashRc.yml
+
+- name: "Get services for user {{ forkSystemUsername }}"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  shell: systemctl --user status docker.service
+  args:
+    executable: /bin/bash
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
+    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"  
+  register: forkDockerServiceStatusResult
+  changed_when: false
+  failed_when: false
+
+- name: "Set docker service status for user {{ forkSystemUsername }}"
+  set_fact:
+    forkDockerServiceIsRunning: "{{ (forkDockerServiceStatusResult.rc == 0 and 'loaded' in forkDockerServiceStatusResult.stdout_lines.1 and 'active' in forkDockerServiceStatusResult.stdout_lines.2)|bool }}"
+
+- name: "Install rootless docker for {{ forkIdentifier|capitalize }}"
+  when: not forkDockerServiceIsRunning
+  include_tasks: install-rootless.yml
+
+
+
+- name: "Create null profile file for {{ forkIdentifier|capitalize }} rootless Docker"
+  become: yes
+  copy:
+    content: '{}'
+    dest: "{{ forkHomeDirectory }}/.config/docker/profile.json"
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: 0644
+    force: yes
+
+  # NOTE: Debian changed from cgroupsv1 to cgroupsv2 in bulleye
+  # preventing docker OCI service to start. Corresponding parameter below
+  # can eventually be removed.
+- name: "Modify {{ forkIdentifier|capitalize }} rootless Docker service file"
+  become: yes
+  replace:
+    path: "{{ forkHomeDirectory }}/.config/systemd/user/docker.service"
+    regexp: '^ExecStart=.*$'
+    replace: >
+      ExecStart=/usr/bin/dockerd-rootless.sh
+      --seccomp-profile
+      {{ forkHomeDirectory }}/.config/docker/profile.json
+      {% if ansible_distribution == 'Debian' and ansible_distribution_major_version|int >= 11 %} --exec-opt native.cgroupdriver=cgroupfs{% endif %}
+ 
+
+- name: Restart {{ forkIdentifier|capitalize }} rootless Docker service
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  systemd: 
+    name: docker.service
+    daemon_reload: yes
+    state: restarted
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
+    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock" 
+  changed_when: false
+
+
+## Backup
+
+- name: "Ensure {{ forkIdentifier|capitalize }} container backup data directory"
+  when: 
+    - mavenoForksBackupDataDirectory is defined
+  become: yes
+  file:
+    path: "{{ mavenoForksBackupDataDirectory }}/{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+    state: directory
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0700
+  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+  loop_control:
+    loop_var: forkRequirementsInstanceItem
+  tags: services
+
+
+## Wallet kicker
+
+- name: Generate wallet kicker script template
+  when:
+    - not forkWalletKickerScriptDockerCreated is defined 
+    - "'wallet' in forkRequirementsInstanceItem.startOption"
+  become: yes
+  template:
+    src: wallet-kicker-docker.sh.j2
+    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-docker.sh"
+    force: yes
+    owner: "{{ mavenoManagingSystemUsername }}"
+    group: "{{ mavenoManagingSystemUsername }}"
+    mode: 0755
+  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+  loop_control:
+    loop_var: forkRequirementsInstanceItem
+  tags: services
+
+- set_fact:
+    forkWalletKickerScriptDockerCreated: yes
+  when: "'wallet' in forkRequirementsInstanceItem.startOption"
+  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+  loop_control:
+    loop_var: forkRequirementsInstanceItem
+  tags: services
+
+...

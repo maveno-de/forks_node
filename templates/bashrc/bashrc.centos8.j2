@@ -1,0 +1,35 @@
+#NON-INTERACTIVE
+
+{% if contextNonInteractiveRules is defined %}
+{{ (contextNonInteractiveRules is string)|ternary(contextNonInteractiveRules, contextNonInteractiveRules|join('\n')) }}
+{% endif %}
+
+#USERPATH
+{% if contextUserPaths is defined %}
+USER_PATH="{{ (contextUserPaths is string)|ternary(contextUserPaths, contextUserPaths|join(':')) }}"
+{% else %}
+#USER_PATH=
+{% endif %}
+
+pathBuffer="$PATH"
+[[ -n "${USER_PATH}" ]] && pathBuffer="${USER_PATH}:${PATH}"
+export PATH=$(n= IFS=':'; for e in $pathBuffer; do [[ :$n == *:$e:* ]] || n+=$e:; done; echo "${n:0: -1}")
+unset pathBuffer
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+	. /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+
+# User specific aliases and functions
+
+
+#INTERACTIVE
+
+{% if contextInteractiveRules is defined %}
+{{ (contextInteractiveRules is string)|ternary(contextInteractiveRules, contextInteractiveRules|join('\n')) }}
+{% endif %}

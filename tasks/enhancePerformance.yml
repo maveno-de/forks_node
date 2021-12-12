@@ -1,0 +1,63 @@
+---
+
+
+- name: Query RPi model identifier
+  shell: cat /proc/device-tree/model 2>/dev/null
+  register: rpiModelShellResult
+  changed_when: false
+  failed_when: false
+
+- name: Slurp config.txt file (PiOS)
+  when:
+    - ansible_lsb.id == 'Raspbian'
+    - "'Raspberry Pi 4 Model B' in rpiModelShellResult.stdout"
+  become: yes
+  slurp:
+    src: /boot/config.txt
+  register: configTxtPiosSlurpResult
+
+- name: Slurp config.txt file (Ubuntu)
+  when: 
+    - ansible_distribution == 'Ubuntu'
+    - "'raspi' in ansible_kernel"
+    - "'Raspberry Pi 4 Model B' in rpiModelShellResult.stdout"
+  become: yes
+  slurp:
+    src: /boot/firmware/config.txt
+  register: configTxtUbuntuSlurpResult
+
+- name: Add turbo boost to RPi 4 config (PiOS)
+  when:
+    - ansible_lsb.id == 'Raspbian'
+    - "'Raspberry Pi 4 Model B' in rpiModelShellResult.stdout"
+    - not 'arm_boost=1' in configTxtPiosSlurpResult['content']|b64decode
+  become: yes
+  lineinfile:
+    path: /boot/config.txt
+    line: "{{ forkCommandLineItem }}"
+    insertafter: EOF
+  loop:
+    - over_voltage=2
+    - arm_freq=1800
+  loop_control:
+    loop_var: forkCommandLineItem
+
+- name: Add turbo boost to RPi 4 config (Ubuntu)
+  when: 
+    - ansible_distribution == 'Ubuntu'
+    - "'raspi' in ansible_kernel"
+    - "'Raspberry Pi 4 Model B' in rpiModelShellResult.stdout"
+    - not 'arm_boost=1' in configTxtUbuntuSlurpResult['content']|b64decode
+  become: yes
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: "{{ forkCommandLineItem }}"
+    insertafter: EOF
+  loop:
+    - over_voltage=2
+    - arm_freq=1800
+  loop_control:
+    loop_var: forkCommandLineItem
+
+
+...

@@ -1,0 +1,77 @@
+#!{{ mavenoVenvInterpreter }}
+
+import os, re, json
+
+from datetime import *
+from dateutil.parser import *
+
+LOGFILES = [
+]
+
+READ_LAST_LINES = 30
+SAMPLES = 18
+
+def readLastNLines(f, n):
+
+    line = 0
+    f.seek(-2, 2)
+
+    while line < n:
+        while f.read(1) != b"\n":
+            f.seek(-2, 1)
+        f.seek(-2, 1)
+        line += 1
+
+    return f.read()
+
+
+baseDir = os.path.dirname(os.path.dirname(__file__))
+tempDir = os.path.join(baseDir, 'tmp')
+
+updatedHeightPattern = re.compile('Updated peak to height ([0-9]+)')
+
+for fork in LOGFILES:
+
+    try:
+        with open(os.path.join(tempDir,f"{fork[0]}.blocktimes.json"), 'r', encoding='utf-8') as f:
+            blockData = json.load(f)
+    except:
+        blockData = []
+
+
+    with open(fork[1], "rb") as f:
+
+        updatedHeights = [
+                           (datetime.strftime(parse(l.split(' ')[0]),'%s'),
+                            updatedHeightPattern.search(l).group(1)) 
+                            for l in readLastNLines(f, READ_LAST_LINES).decode('utf-8').split('\n')
+                            if updatedHeightPattern.search(l)]
+
+        if len(updatedHeights) > 0:
+            lastHeight = updatedHeights[-1]
+            if len(blockData) == 0 or lastHeight[0] > blockData[-1][0]:
+                blockData += [lastHeight]
+
+        if len(blockData) > 1:
+
+            sumBlocksPerHour = 0
+
+            for i in range(1, len(blockData)):
+
+                timestep = int(blockData[i][0]) - int(blockData[i-1][0])
+                blocks = int(blockData[i][1]) - int(blockData[i-1][1])
+
+                blocksPerHour = float(blocks) / float(timestep) * 3600.0
+
+                sumBlocksPerHour += blocksPerHour 
+
+            timespan = float(int(blockData[-1][0]) - int(blockData[0][0])) / 3600.0
+
+            avgBlocksPerHour = sumBlocksPerHour / float(len(blockData)-1.0)
+            print(f"{fork[0]}: Average blocks per hour {'{:10.2f}'.format(avgBlocksPerHour)} over last {'{:10.2f}'.format(timespan)} hours")
+
+
+    with open(os.path.join(tempDir,f"{fork[0]}.blocktimes.json"), 'w', encoding='utf-8') as f:
+        json.dump(blockData[-SAMPLES:], f, ensure_ascii=False, indent=4)
+
+
