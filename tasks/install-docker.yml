@@ -13,6 +13,7 @@
     SSL_CERT_DIR: /etc/ssl/certs
     REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
+
 - name: "Build {{ forkIdentifier|capitalize }} docker image"
   become: yes
   become_user: "{{ forkSystemUsername }}"
@@ -22,7 +23,6 @@
       nocache: yes
       path: "{{ forkHomeDirectory }}/.local/share/chia-docker"
       platform: "{{ mavenoForksPlatformLookupTable[mavenoSystemArchitecture] }}"
-      args: "{{ (forkBuildRequirementsDescriptor.branch is defined)|ternary({ 'BRANCH': forkBuildRequirementsDescriptor.branch }, {}) }}"
     source: build
     docker_host: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
   environment:
@@ -30,6 +30,27 @@
   async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   poll: 0
   register: forkDockerImageBuildJob
+
+- name: "Build {{ forkIdentifier|capitalize }} docker image"
+  when: "'branch' in forkBuildRequirementsDescriptor.keys()"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  community.docker.docker_image:
+    name: "{{ forkIdentifier }}"
+    build:
+      nocache: yes
+      path: "{{ forkHomeDirectory }}/.local/share/chia-docker"
+      platform: "{{ mavenoForksPlatformLookupTable[mavenoSystemArchitecture] }}"
+      args:
+        BRANCH: "{{ forkBuildRequirementsDescriptor.branch }}"
+    source: build
+    docker_host: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
+  async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  poll: 0
+  register: forkDockerImageBuildJob
+
 
 - name: "Wait for {{ forkIdentifier|capitalize }} docker image being built"
   become: yes

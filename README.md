@@ -422,7 +422,7 @@ Value: When set to true reduced connections limits are configured to reduce CPU 
 
 Type: string
 Value: Value is passed to the git command as branch name.
-Default: main
+Default: latest
 
 #### configurationDirectoryName
 

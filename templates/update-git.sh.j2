@@ -24,7 +24,7 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         systemctl stop "${SERVICE_NAME}"
         usermod -aG sudo "${USER_NAME}"
         rm -rf "${APP_DIR}"
-        su - "${USER_NAME}" -c "git clone ${GITHUB_REPO_URL} ${APP_DIR}"
+        su - "${USER_NAME}" -c "git clone -b {{ forkBuildRequirementsDescriptor.branch|default(mavenoForksDefaultBranch) }} ${GITHUB_REPO_URL} ${APP_DIR}"
         chmod 'ug+x' "${APP_DIR}/install.sh"
         su - "${USER_NAME}" -c "cd ${APP_DIR} && ./install.sh"
         deluser "${USER_NAME}" 'sudo'

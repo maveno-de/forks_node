@@ -17,7 +17,7 @@
     force: yes
     update: yes
     recursive: yes
-    version: "{{ forkBuildRequirementsDescriptor.branch|default('main') }}"
+    version: "{{ forkBuildRequirementsDescriptor.branch|default(mavenoForksDefaultBranch) }}"
 
 - name: Make installer executable
   become: yes
