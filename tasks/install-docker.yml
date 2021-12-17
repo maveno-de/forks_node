@@ -15,6 +15,7 @@
 
 
 - name: "Build {{ forkIdentifier|capitalize }} docker image"
+  when: not 'branch' in forkBuildRequirementsDescriptor.keys()
   become: yes
   become_user: "{{ forkSystemUsername }}"
   community.docker.docker_image:
@@ -31,7 +32,18 @@
   poll: 0
   register: forkDockerImageBuildJob
 
-- name: "Build {{ forkIdentifier|capitalize }} docker image"
+- name: "Wait for {{ forkIdentifier|capitalize }} docker image being built"
+  when: not 'branch' in forkBuildRequirementsDescriptor.keys()
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  async_status:
+    jid: "{{ forkDockerImageBuildJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (90 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  delay: 20
+
+- name: "Build {{ forkIdentifier|capitalize }} docker image ({{ forkBuildRequirementsDescriptor.branch }})"
   when: "'branch' in forkBuildRequirementsDescriptor.keys()"
   become: yes
   become_user: "{{ forkSystemUsername }}"
@@ -51,8 +63,8 @@
   poll: 0
   register: forkDockerImageBuildJob
 
-
-- name: "Wait for {{ forkIdentifier|capitalize }} docker image being built"
+- name: "Wait for {{ forkIdentifier|capitalize }} docker image ({{ forkBuildRequirementsDescriptor.branch }}) being built"
+  when: "'branch' in forkBuildRequirementsDescriptor.keys()"
   become: yes
   become_user: "{{ forkSystemUsername }}"
   async_status:

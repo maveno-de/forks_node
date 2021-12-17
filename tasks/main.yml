@@ -41,7 +41,7 @@
 
   #HINT: Starting Chia fork services the latest possible to prevent timeouts
   # when building due to cpu time consumption
-- name: "Start {{ forkItem|capitalize }} service"
+- name: Start Fork service
   when: forkBuildRequirementsDescriptor.buildOption == 'git'
   vars:
     forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
