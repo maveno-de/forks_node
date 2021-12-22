@@ -39,34 +39,14 @@
     executable: /bin/bash
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"    
+    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
+  failed_when: no
 
 - name: Remove docker data for user {{ forkSystemUsername }}"
   become: yes
   file:
     path: "{{ forkHomeDirectory }}/.local/share/docker"
     state: absent
-
-
-#- name: Check if context user runtime directory exists
-#  become: yes
-#  stat:
-#    path: "/run/user/{{ forkUserIdShellResult.stdout }}"
-#  register: runtimeDirectoryStatResult
-#
-#- name: Stop rootless Docker service
-#  when: runtimeDirectoryStatResult.stat.exists
-#  become: yes
-#  become_user: "{{ forkSystemUsername }}"
-#  remote_user: "{{ forkSystemUsername }}"
-#  systemd:
-#    name: docker.service
-#    enabled: no
-#    state: stopped
-#    scope: user
-#  environment:
-#    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-
 
 - name: Disable services for context user
   become: yes

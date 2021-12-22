@@ -5,7 +5,7 @@
 
 - name: Determine latest containerd package version
   maveno_source_https:
-    url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
+    url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: containerd.io_
     suffix: "_{{ mavenoSystemArchitecture }}.deb"
     checkResult: no
@@ -13,10 +13,11 @@
   register: containerdIoSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
+    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 - name: Determine latest Docker CE cli package version
   maveno_source_https:
-    url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
+    url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-cli_'
     suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
     checkResult: no
@@ -24,10 +25,11 @@
   register: dockerCeCliSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
+    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 - name: Determine latest Docker CE package version
   maveno_source_https:
-    url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
+    url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce_'
     suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
     checkResult: no
@@ -35,10 +37,11 @@
   register: dockerCeSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
+    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 - name: Determine latest Docker rootless extras package version
   maveno_source_https:
-    url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
+    url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-rootless-extras_'
     suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"  
     checkResult: no
@@ -46,6 +49,7 @@
   register: dockerCeRootlessExtrasSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
+    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 
 - name: Switch temporarily to system python
