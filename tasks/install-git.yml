@@ -27,18 +27,19 @@
 
 
 - name: "Install {{ forkIdentifier|capitalize }} blockchain"
+  when: not 'buildEnvVars' in forkBuildRequirementsDescriptor.keys()
   become: yes
   become_user: "{{ forkSystemUsername }}"
   shell: ./install.sh
   args:
     chdir: "{{ forkApplicationDirectory }}"
     executable: /bin/sh
-  environment: "{{ ('buildEnvVars' in forkBuildRequirementsDescriptor.keys())|ternary(forkBuildRequirementsDescriptor.buildEnvVars, []) }}"
   async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   poll: 0
   register: installBlockchainJob
 
 - name: "Wait for {{ forkIdentifier|capitalize }} blockchain being installed"
+  when: not 'buildEnvVars' in forkBuildRequirementsDescriptor.keys()
   become: yes
   become_user: "{{ forkSystemUsername }}"
   async_status:
@@ -47,6 +48,31 @@
   until: asyncStatusResult.finished
   retries: "{{ (120 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   delay: 15
+
+- name: "Install {{ forkIdentifier|capitalize }} blockchain (additional environment variables)"
+  when: "'buildEnvVars' in forkBuildRequirementsDescriptor.keys()"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  shell: ./install.sh
+  args:
+    chdir: "{{ forkApplicationDirectory }}"
+    executable: /bin/sh
+  environment: "{{ forkBuildRequirementsDescriptor.buildEnvVars }}"
+  async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  poll: 0
+  register: installBlockchainJob
+
+- name: "Wait for {{ forkIdentifier|capitalize }} blockchain being installed (additional environment variables)"
+  when: "'buildEnvVars' in forkBuildRequirementsDescriptor.keys()"
+  become: yes
+  become_user: "{{ forkSystemUsername }}"
+  async_status:
+    jid: "{{ installBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
+  delay: 15
+
 
 - name: "Remove {{ forkIdentifier|capitalize }} system user from sudo group"
   become: yes
