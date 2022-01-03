@@ -9,24 +9,8 @@
   register: forkUserIdShellResult
   tags: certificates
 
-
-  #HINT: Stopping all running containers to prevent timeouts
-  # when building due to cpu time consumption
-- name: "Remove rootless docker service for user {{ forkSystemUsername }}"
-  when: forkUserIdShellResult.stdout != ''
-  include_tasks: remove-rootless.yml
-
-
-- name: Prepare rootless docker service
-  when: not forkRootlessDockerIsPrepared is defined
-  include_tasks: "prepare-rootless-{{ mavenoForksDockerInstallationOption }}.yml"
-  
-- name: Set docker rootless prepared status
-  set_fact:
-    forkRootlessDockerIsPrepared: yes
-
-
 - name: "Create {{ forkIdentifier|capitalize }} system user"
+  when: forkUserIdShellResult.stdout == ''
   become: yes
   user:
     name: "{{ forkSystemUsername }}"
@@ -51,10 +35,24 @@
     state: directory
     owner: "{{ forkSystemUsername }}"
     group: "{{ forkSystemUsername }}"
-    recurse: yes
-    follow: no
     mode: o=
 
+
+  #TODO: Role is not idempotent with current when clause, stopping with error 
+  # when running on existing rootless docker in the corresponding user
+  #HINT: Stopping all running containers to prevent timeouts
+  # when building due to cpu time consumption
+- name: "Remove rootless docker service for user {{ forkSystemUsername }}"
+  #when: forkUserIdShellResult.stdout != ''
+  include_tasks: remove-rootless.yml
+
+- name: Prepare rootless docker service
+  when: not forkRootlessDockerIsPrepared is defined
+  include_tasks: "prepare-rootless-{{ mavenoForksDockerInstallationOption }}.yml"
+  
+- name: Set docker rootless prepared status
+  set_fact:
+    forkRootlessDockerIsPrepared: yes
 
 
 - name: "Generate .bashrc for {{ forkIdentifier|capitalize }} system user"

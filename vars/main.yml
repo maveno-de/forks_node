@@ -24,5 +24,15 @@ mavenoForksStartOptionLookupTable:
   harvester: harvester
   fullnode: node
 
+slirp4NetNsArchitectureLookupTable:
+  amd64: x86_64
+  armhf: armv7l
+  arm64: aarch64
+
+fuseOverlayFsArchitectureLookupTable:
+  amd64: x86_64
+  armhf: armv7l
+  arm64: aarch64
+
 
 ...

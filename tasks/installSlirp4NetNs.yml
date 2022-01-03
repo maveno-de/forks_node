@@ -7,20 +7,12 @@
   shell: apt-cache policy slirp4netns | grep andidat | grep -Eo '[^[:blank:]]+$' | grep -Eo '^[^-]+' | cat
   register: slirp4netnsAvailableVersionShellResult
 
-
 - name: Install latest static version of slirp4netns executable
   when: >
-    slirp4netnsAvailableVersionShellResult.stdout == ''
+    slirp4netnsAvailableVersionShellResult.stdout|regex_search('[0-9]+(?:\.[0-9]+){1,2}') == none
     or slirp4netnsAvailableVersionShellResult.stdout is version('1.0.0','<')
   block:
 
-    - name: Set slirp4netns architecture lookup table
-      set_fact:
-        slirp4NetNsArchitectureLookupTable:
-          amd64: x86_64
-          armhf: armv7l
-          arm64: aarch64
-    
       # Latest version result: slirp4netnsSourceGithubResult.recommended_version
     - name: Determine slirp4netns latest release version
       maveno_source_github:
@@ -53,7 +45,7 @@
 
 - name: Install latest static vesion of slirp4netns
   when: 
-    - slirp4netnsAvailableVersionShellResult.stdout != ''
+    - slirp4netnsAvailableVersionShellResult.stdout|regex_search('[0-9]+(?:\.[0-9]+){1,2}') != none
     - slirp4netnsAvailableVersionShellResult.stdout is version('1.0.0','>=')
   block:
 

@@ -1,6 +1,16 @@
 ---
 
 
+- name: Fix permissions for local docker directory
+  become: yes
+  file:
+    path: "{{ forkHomeDirectory }}/.local/share/docker"
+    recurse: yes
+    follow: no
+    owner: "{{ forkSystemUsername }}"
+    group: "{{ forkSystemUsername }}"
+    mode: u=rwX,g=rX,o=
+
 - name: "Get {{ forkIdentifier|capitalize }} running containers"
   become: yes
   become_user: "{{ forkSystemUsername }}"

@@ -19,7 +19,7 @@
   maveno_source_https:
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-cli_'
-    suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
+    suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
     checkResult: no
     simple: yes
   register: dockerCeCliSourceHttpsResult
@@ -31,7 +31,7 @@
   maveno_source_https:
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce_'
-    suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
+    suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
     checkResult: no
     simple: yes
   register: dockerCeSourceHttpsResult
@@ -43,7 +43,7 @@
   maveno_source_https:
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-rootless-extras_'
-    suffix: "{{ ansible_distribution|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"  
+    suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"  
     checkResult: no
     simple: yes
   register: dockerCeRootlessExtrasSourceHttpsResult
@@ -105,6 +105,9 @@
     - "{{ dockerCeRootlessExtrasSourceHttpsResult.recommended_url }}"
   loop_control:
     loop_var: dockerCeDebPackageUrlItem
+  environment:
+    SSL_CERT_DIR: /etc/ssl/certs
+    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 ###
 - name: Switch back to framework python venv
