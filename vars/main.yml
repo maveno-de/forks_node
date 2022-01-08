@@ -19,6 +19,7 @@ mavenoForksLogAnalyzerArchitectureLookupTable:
 mavenoForksStartOptionLookupTable:
   fullnode+wallet: wallet
   fullnode+farmer: farmer-no-wallet
+  fullnode+farmer+wallet: farmer
   farmer: farmer-only
   wallet: wallet-only
   harvester: harvester
