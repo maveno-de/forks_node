@@ -1,0 +1,4 @@
+[submodule "library"]
+	path = library
+	url = git@github.com:maveno-de/maveno-ansible-modules.git
+	branch = main
