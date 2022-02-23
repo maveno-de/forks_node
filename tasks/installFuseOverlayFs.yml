@@ -23,10 +23,18 @@
         REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
       register: fuseOverlayFsSourceGithubResult
     
+      #RESULT: fuseOverlayFsVersionShellResult.stdout
+    - name: Determine fuse-overlayfs installed version
+      shell: /usr/bin/fuse-overlayfs -V | grep version | awk '{print $3}'
+      args:
+        executable: /bin/bash
+      register: fuseOverlayFsVersionShellResult
+    
     - name: Download and install latest static version of fuse-overlayfs executable
+      when: fuseOverlayFsSourceGithubResult.recommended_version != fuseOverlayFsVersionShellResult.stdout
       become: yes
       get_url:
-        url: "https://github.com/containers/fuse-overlayfs/releases/download/v{{ fuseOverlayFsSourceGithubResult.recommended_version }}/fuse-overlayfs-{{ fuseOverlayFsArchitectureLookupTable[mavenoSystemArchitecture] }}"
+        url: "https://github.com/containers/fuse-overlayfs/releases/download/v{{ fuseOverlayFsSourceGithubResult.recommended_version }}/fuse-overlayfs-{{ fuseOverlayFsArchitectureLookupTable[osgwSystemArchitecture] }}"
         dest: /usr/bin/
         owner: root
         group: root
@@ -39,6 +47,7 @@
       delay: 30
 
     - name: Rename fuse-overlayfs executable executable
+      when: fuseOverlayFsSourceGithubResult.recommended_version != fuseOverlayFsVersionShellResult.stdout
       become: yes
       shell: "mv \"{{ getUrlResult.dest }}\" /usr/bin/fuse-overlayfs"
 

@@ -32,13 +32,6 @@
   loop_control:
     loop_var: forkItem
 
-- name: Configure Chia forks installation
-  include_tasks: configure.yml
-  tags:
-    - utilities
-    - services
-
-
   #HINT: Starting Chia fork services the latest possible to prevent timeouts
   # when building due to cpu time consumption
 - name: Start Fork service
@@ -61,6 +54,13 @@
   loop_control:
     loop_var: forkItem
   tags: certificates
+
+
+- name: Configure Chia forks installation
+  include_tasks: configure.yml
+  tags:
+    - utilities
+    - services
 
 
 ...
