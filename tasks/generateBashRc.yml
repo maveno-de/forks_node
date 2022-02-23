@@ -13,7 +13,7 @@
 # [contextRemoveExistingFile]
 
 #- name: Remove existing .bashrc file
-#  when: contextRemoveExistingFile|default(no)
+#  when: contextRemoveExistingFile|default(false))
 #  become: yes
 #  file:
 #    path: "{{ contextHomeDirectory }}/.bash_profile"
