@@ -11,8 +11,8 @@ fi
 
 if [[ "${1}" == '--force' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" ]]; then
 
-{% for forkRequirementsInstanceItem in forkBuildRequirementsDescriptor.instances %}
-    [[ -n $(docker ps | grep {{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}) ]] && docker stop {{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}
+{% for mavenoForksRequirementsInstanceItem in forkBuildRequirementsDescriptor.instances %}
+    [[ -n $(docker ps | grep {{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}) ]] && docker stop {{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}
 {% endfor %}
 
     docker container prune -f
@@ -20,21 +20,21 @@ if [[ "${1}" == '--force' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" 
 
     docker build --no-cache -t {{ forkIdentifier }} {{ mavenoVariableDirectory }}/{{ forkIdentifier }}/.local/share/chia-docker/
 
-{% for forkRequirementsInstanceItem in forkBuildRequirementsDescriptor.instances %}
-{% if forkRequirementsInstanceItem.startOption == 'fullnode+wallet' %}
-    docker run --name={{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ forkRequirementsInstanceItem.name }} --net={{ forkIdentifier }}-network \
-        -v {{ mavenoVariableDirectory }}/{{ forkIdentifier }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forkIdentifier }} -p {{ forkBuildRequirementsDescriptor.nodePort }}:{{ forkBuildRequirementsDescriptor.nodePort }} -e log_level=INFO{% if forkBuildRequirementsDescriptor.lightFullNode|default(true) %} -e light=true{% endif %} \
+{% for mavenoForksRequirementsInstanceItem in forkBuildRequirementsDescriptor.instances %}
+{% if mavenoForksRequirementsInstanceItem.startOption == 'fullnode+wallet' %}
+    docker run --name={{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ mavenoForksRequirementsInstanceItem.name }} --net={{ forkIdentifier }}-network \
+        -v {{ mavenoVariableDirectory }}/{{ forkIdentifier }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}:/root/.{{ forkIdentifier }} -p {{ forkBuildRequirementsDescriptor.nodePort }}:{{ forkBuildRequirementsDescriptor.nodePort }} -e log_level=INFO{% if forkBuildRequirementsDescriptor.lightFullNode|default(true) %} -e light=true{% endif %} \
         -e keys=/root/.{{ forkIdentifier }}/mainnet/config/.mnemonics -d {{ forkIdentifier }}:latest
 {% endif %}
-{% if forkRequirementsInstanceItem.startOption == 'wallet' %}
-    docker run --name={{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ forkRequirementsInstanceItem.name }} --net={{ forkIdentifier }}-network \
-        -v {{ mavenoVariableDirectory }}/{{ forkIdentifier }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forkIdentifier }} -e log_level=INFO -e wallet=true \
+{% if mavenoForksRequirementsInstanceItem.startOption == 'wallet' %}
+    docker run --name={{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ mavenoForksRequirementsInstanceItem.name }} --net={{ forkIdentifier }}-network \
+        -v {{ mavenoVariableDirectory }}/{{ forkIdentifier }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}:/root/.{{ forkIdentifier }} -e log_level=INFO -e wallet=true \
         -e fullnode_address={{ forkIdentifier }}.{{ forkMainNodeName }} -e keys=/root/.{{ forkIdentifier }}/mainnet/config/.mnemonics -d {{ forkIdentifier }}:latest
 {% endif %}
-{% if forkRequirementsInstanceItem.startOption == 'harvester' %}
-    docker run --name={{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ forkRequirementsInstanceItem.name }} \
-        -v {{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert:/root/.{{ forkIdentifier }}-cacert -e log_level=INFO -e harvester=true -e ca=/root/.{{ forkIdentifier }}-cacert \
-        -e farmer_address={{ forkRequirementsInstanceItem.farmerAddress }} -e farmer_port={{ forkRequirementsInstanceItem.farmerPort }} -e keys=copy -d {{ forkIdentifier }}:latest
+{% if mavenoForksRequirementsInstanceItem.startOption == 'harvester' %}
+    docker run --name={{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in mavenoSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forkIdentifier }}.{{ mavenoForksRequirementsInstanceItem.name }} \
+        -v {{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}-cacert:/root/.{{ forkIdentifier }}-cacert -e log_level=INFO -e harvester=true -e ca=/root/.{{ forkIdentifier }}-cacert \
+        -e farmer_address={{ mavenoForksRequirementsInstanceItem.farmerAddress }} -e farmer_port={{ mavenoForksRequirementsInstanceItem.farmerPort }} -e keys=copy -d {{ forkIdentifier }}:latest
 {% endif %}
 
 {% endfor %}

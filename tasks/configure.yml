@@ -1,20 +1,20 @@
 ---
 
-  
+
 - name: Assign Chia fork instance group to managing user
-  become: yes
+  become: true
   vars:
-    forkIdentifier: "{{ forkItem }}"
+    forkIdentifier: "{{ mavenoForksForkItem }}"
     forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkIdentifier] }}"
     forkSystemUsername: "{{ forkBuildRequirementsDescriptor.systemUsername|default(forkIdentifier) }}"
   user:
     name: "{{ mavenoManagingSystemUsername }}"
-    groups: 
+    groups:
       - "{{ forkSystemUsername }}"
-    append: yes
+    append: true
   loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
   loop_control:
-    loop_var: forkItem
+    loop_var: mavenoForksForkItem
 
 
 ## Qwinns Forktools

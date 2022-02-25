@@ -1,22 +1,19 @@
 ---
 
 
-- name: Switch temporarily to system python
-  set_fact: 
+- name: Store location of current python venv
+  set_fact:
     tempPythonInterpreter: "{{ ansible_python_interpreter }}"
-- set_fact: 
+- name: Switch temporarily to system python
+  set_fact:
     ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
-###
+# ###
 
-- debug:
-    msg: "{{ ansible_distribution_release }}" 
-
-
-  ## Installation per apt
+  # Installation per apt
 
 - name: Install Docker repo key
   when: ansible_facts['os_family'] == 'Debian'
-  become: yes
+  become: true
   apt_key:
     url: "https://download.docker.com/linux/{{ ansible_distribution|lower }}/gpg"
     state: present
@@ -24,14 +21,15 @@
 
 - name: Get architecture from dpkg
   when: ansible_facts['os_family'] == 'Debian'
-  shell: dpkg --print-architecture
+  command: dpkg --print-architecture
   register: dkpgArchitectureShellResult
+  changed_when: dkpgArchitectureShellResult.rc == 0
 
 - name: Add Docker repository (Debian family)
   when: ansible_facts['os_family'] == 'Debian'
-  become: yes
+  become: true
   apt_repository:
-    repo: >
+    repo: >-
       deb [arch={{ dkpgArchitectureShellResult.stdout }} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]
       https://download.docker.com/linux/{{ ansible_distribution|lower }}
       {{ ansible_distribution_release }} stable
@@ -40,9 +38,8 @@
 
 - name: Install Docker system packages (Debian family)
   when: ansible_facts['os_family'] == 'Debian'
-  become: yes
+  become: true
   apt:
-    state: latest
     pkg:
 
       - docker-ce
@@ -51,12 +48,11 @@
 
 
 - name: Install Docker system packages for rootless mode (Debian family)
-  when: 
+  when:
     - ansible_facts['os_family'] == 'Debian'
     - forkSystemUsername != ''
-  become: yes
+  become: true
   apt:
-    state: latest
     pkg: uidmap
 
 - name: Install RPi extra modules (Ubuntu 21.10 RPi)
@@ -66,16 +62,14 @@
       ansible_distribution_version == '21.10'
       or ansible_distribution_major_version > '21'
     - "'raspi' in ansible_kernel"
-  become: yes
+  become: true
   apt:
-    state: latest
     pkg:
-
       - linux-modules-extra-raspis
 
-###
+# ###
 - name: Switch back to framework python venv
-  set_fact: 
+  set_fact:
     ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
@@ -87,12 +81,12 @@
 
 
 - name: Stop and disable system docker service
-  become: yes
+  become: true
   systemd:
     name: docker.service
-    enabled: no
+    enabled: false
     state: stopped
-    daemon_reload: yes
+    daemon_reload: true
 
 
 ...

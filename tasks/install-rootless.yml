@@ -2,8 +2,8 @@
 
 
 - name: "Enable user services for user {{ forkSystemUsername }}"
-  become: yes
-  shell: "loginctl enable-linger {{ forkSystemUsername }}"
+  become: true
+  command: "loginctl enable-linger {{ forkSystemUsername }}"
   args:
     creates: "/var/lib/systemd/linger/{{ forkSystemUsername }}"
 
@@ -15,17 +15,17 @@
       - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
   include_tasks: addNonInteractiveRulesToBashRc.yml
 
-
 - name: "Install rootless docker for user {{ forkSystemUsername }}"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
-  shell: dockerd-rootless-setuptool.sh install
+  command: dockerd-rootless-setuptool.sh install
   args:
     chdir: "{{ forkHomeDirectory }}"
-    executable: /bin/bash
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"    
+    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
+  register: installRootlessDockerCommandResult
+  changed_when: installRootlessDockerCommandResult.rc == 0
 
 
 ...

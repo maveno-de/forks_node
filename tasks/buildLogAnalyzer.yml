@@ -1,5 +1,6 @@
 ---
 
+
   # Latest version result: chiaLoganalyzerSourceGithubResult.recommended_version
 - name: Determine Chia Loganalyzer latest release version
   maveno_source_github:
@@ -12,9 +13,12 @@
   tags: utilities
 
 - name: Download Chia Loganalyzer executable
-  become: yes
+  become: true
   get_url:
-    url: "https://github.com/kubec/chia-log-analyzer/releases/download/{{ chiaLoganalyzerSourceGithubResult.recommended_version }}/chia-log-analyzer.go-linux-{{ mavenoForksLogAnalyzerArchitectureLookupTable[mavenoSystemArchitecture] }}"
+    url: >-
+      https://github.com/kubec/chia-log-analyzer/releases/download/
+      {{ chiaLoganalyzerSourceGithubResult.recommended_version }}/
+      chia-log-analyzer.go-linux-{{ mavenoForksLogAnalyzerArchitectureLookupTable[mavenoSystemArchitecture] }}
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer"
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
@@ -26,5 +30,6 @@
   retries: 10
   delay: 30
   tags: utilities
+
 
 ...

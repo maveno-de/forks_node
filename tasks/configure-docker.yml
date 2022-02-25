@@ -2,40 +2,42 @@
 
 
 - name: "Add .mnemonics file to {{ forkIdentifier|capitalize }} instance"
-  when: "'mnemonics' in forkRequirementsInstanceItem.keys()"
-  no_log: yes
-  become: yes
+  when: "'mnemonics' in mavenoForksRequirementsInstanceItem.keys()"
+  no_log: true
+  become: true
   copy:
-    dest: "{{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}/mainnet/config/.mnemonics"
-    content: "{{ (((lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forkIdentifier].instances)|selectattr('name', 'equalto', forkRequirementsInstanceItem.name))[0].mnemonics }}"
+    dest: "{{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}/mainnet/config/.mnemonics"
+    content: >-
+      {{ (((lookup('file', 'files/credentials/' + inventory_hostname + '.yml')
+       | from_yaml).forks[forkIdentifier].instances)
+       | selectattr('name', 'equalto', mavenoForksRequirementsInstanceItem.name))[0].mnemonics }}
     owner: "{{ forkSystemUsername }}"
     group: "{{ forkSystemUsername }}"
     mode: 0600
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
 
 
 - name: "Restart {{ forkIdentifier|capitalize }} instance containers"
-  when: forkRequirementsInstanceItem.enabled|default(true)
-  become: yes
+  when: mavenoForksRequirementsInstanceItem.enabled|default(true)
+  become: true
   become_user: "{{ forkSystemUsername }}"
-  shell: "docker restart {{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+  command: "docker restart {{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}"
   args:
-    executable: /bin/bash
     chdir: "{{ forkHomeDirectory }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
+    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
 
 
-  ## Aliases
+  # Aliases
 
 - name: Slurp .bashrc file from managing user
-  become: yes
+  become: true
   slurp:
     src: "{{ mavenoManagingHomeDirectory }}/.bashrc"
   register: managingUserBashRcResult
@@ -46,54 +48,69 @@
     managingUserBashRcFileContent: "{{ managingUserBashRcResult['content'] | b64decode }}"
   tags: utilities
 
-  #TODO: Separate into utils/services
+  # TODO: Separate into utils/services
 - name: "Adding aliases for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
-  when: not (forkBuildRequirementsDescriptor.alias|default(forkIdentifier))+'-'+forkRequirementsInstanceItem.name+'()' in managingUserBashRcFileContent
-  become: yes
+  when: >-
+    not (forkBuildRequirementsDescriptor.alias|default(forkIdentifier))
+    + '-'+mavenoForksRequirementsInstanceItem.name+'()' in managingUserBashRcFileContent
+  become: true
+  vars:
+    # HINT: Das Funktionsalias wurde hier in 2 Definitionen zerlegt um eine
+    # mehrzeilige Anweisung für das YAML-Format zu falten
+    forksAliasCommandLine: >-
+      sudo su - {{ forkSystemUsername }}
+      -c "docker exec -it {{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}
+      venv/bin/{{ forkExecutableName }} $*"
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
     line: |
-      {{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}-{{ forkRequirementsInstanceItem.name }}() {
-          sudo su - {{ forkSystemUsername }} -c "docker exec -it {{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }} venv/bin/{{ forkExecutableName }} $*"
+      {{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}-{{ mavenoForksRequirementsInstanceItem.name }}() {
+          {{ forksAliasCommandLine }}
       }
     insertafter: '^#NON-INTERACTIVE.*'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 - name: "Adding tail alias for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
-    line: "alias tail_{{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}-{{ forkRequirementsInstanceItem.name }}=\"sudo tail -f {{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}/mainnet/log/debug.log\""
+    line: >-
+      alias tail_{{ forkBuildRequirementsDescriptor.alias
+      | default(forkIdentifier) }}-{{ mavenoForksRequirementsInstanceItem.name }}="sudo tail
+      -f {{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}/mainnet/log/debug.log"
     insertafter: '^#NON-INTERACTIVE.*'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 - name: "Adding log inspector alias for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
-  when: "'fullnode' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'fullnode' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
-    line: "alias inspect_{{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}-{{ forkRequirementsInstanceItem.name }}=\"{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer --log={{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}/mainnet/log/debug.log\""
+    line: >-
+      alias inspect_{{ forkBuildRequirementsDescriptor.alias
+      | default(forkIdentifier) }}-{{ mavenoForksRequirementsInstanceItem.name }}="{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer
+      --log={{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}/mainnet/log/debug.log"
     insertafter: '^#NON-INTERACTIVE.*'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 
-  ## Auto-update
+  # Auto-update
 
-  #HINT: For a harvester only node the fullnode entry in descriptor may be ommited.
+  # HINT: For a harvester only node the fullnode entry in descriptor may be ommited.
   # In that case the harvester is used in commit version check
 - name: "Generate {{ forkIdentifier|capitalize }} auto-update script"
   vars:
-    forkMainNodeName: "{{ forkBuildRequirementsDescriptor.fullnodeName|default(forkRequirementsInstanceItem.name) }}"
-  become: yes
+    forkMainNodeName: "{{ forkBuildRequirementsDescriptor.fullnodeName|default(mavenoForksRequirementsInstanceItem.name) }}"
+  become: true
   template:
     src: update-docker.sh.j2
     dest: "{{ forkHomeDirectory }}/.local/bin/update-{{ forkIdentifier }}.sh"
@@ -102,11 +119,11 @@
     mode: 0755
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: services
 
 - name: "Add cron job for updating {{ forkIdentifier|capitalize }}"
-  become: yes
+  become: true
   cron:
     name: "Update {{ forkIdentifier|capitalize }}"
     user: "{{ forkSystemUsername }}"
@@ -117,24 +134,24 @@
   tags: services
 
 
-  ## Wallet kicker
+  # Wallet kicker
 
 - name: "Appending invocation of wallet kick for {{ forkIdentifier|capitalize }} instance"
-  when: "'wallet' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'wallet' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-docker.sh"
-    line: "kickWallet {{ forkSystemUsername }} {{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+    line: "kickWallet {{ forkSystemUsername }} {{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}"
     insertafter: EOL
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: services
 
 
 - name: Ensure cron job for wallet kicker script
-  when: "'wallet' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'wallet' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   cron:
     name: "Kick lazy wallets"
     user: "{{ mavenoManagingSystemUsername }}"
@@ -143,15 +160,15 @@
     hour: '*/5'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: services
 
 
-## Node Performance
+# Node Performance
 
 - name: Generate node perfomance script
-  when: "'fullnode' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'fullnode' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   template:
     src: node_performance.py.j2
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py"
@@ -160,41 +177,43 @@
     mode: 0750
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 - name: Adding aliases for showing node performance to shell of managing user
-  when: "'fullnode' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'fullnode' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
     line: "alias node_performance=\"{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py\""
     insertafter: '^#NON-INTERACTIVE.*'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 - name: "Adding log file for {{ forkIdentifier|capitalize }} instance"
-  when: "'fullnode' in forkRequirementsInstanceItem.startOption"
-  become: yes
+  when: "'fullnode' in mavenoForksRequirementsInstanceItem.startOption"
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py"
-    line: "    ('{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}', '{{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}/mainnet/log/debug.log'),"
+    line: >-
+      {{ '    ' }}('{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}',
+      '{{ forkHomeDirectory }}/.{{ forkIdentifier }}-{{ mavenoForksRequirementsInstanceItem.name }}/mainnet/log/debug.log'),
     insertafter: '^LOGFILES.*'
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
-    loop_var: forkRequirementsInstanceItem
+    loop_var: mavenoForksRequirementsInstanceItem
   tags: utilities
 
 
 - name: Allow {{ forkIdentifier|capitalize }} traffic
   when: "'nodePort' in forkBuildRequirementsDescriptor.keys()"
-  become: yes
+  become: true
   ufw:
     rule: allow
     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
     proto: tcp
-  
+
 
 ...

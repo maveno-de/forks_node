@@ -7,11 +7,11 @@
     - utilities
     - services
 
-  #HINT: Referencing vars in vars here
+  # HINT: Referencing vars in vars here
 - name: Build Chia forks
   vars:
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
-    forkIdentifier: "{{ forkItem }}"
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[mavenoForksForkItem] }}"
+    forkIdentifier: "{{ mavenoForksForkItem }}"
     forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
     forkSystemUsername: "{{ forkBuildRequirementsDescriptor.systemUsername|default(forkIdentifier) }}"
     forkHomeDirectory: "{{ forkBuildRequirementsDescriptor.homeDirectory|default(mavenoVariableDirectory+'/'+forkSystemUsername) }}"
@@ -30,29 +30,29 @@
     - certificates
   loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
   loop_control:
-    loop_var: forkItem
+    loop_var: mavenoForksForkItem
 
-  #HINT: Starting Chia fork services the latest possible to prevent timeouts
+  # HINT: Starting Chia fork services the latest possible to prevent timeouts
   # when building due to cpu time consumption
 - name: Start Fork service
   when: forkBuildRequirementsDescriptor.buildOption == 'git'
   vars:
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
-    forkIdentifier: "{{ forkItem }}"
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[mavenoForksForkItem] }}"
+    forkIdentifier: "{{ mavenoForksForkItem }}"
     forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
     forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
-  become: yes
+  become: true
   systemd:
     name: "{{ forkServiceName }}.service"
-    daemon-reload: yes
+    daemon-reload: true
     enabled: "{{ forkEnabled }}"
     state: "{{ forkEnabled|ternary('restarted', 'stopped') }}"
+  # TODO: Check target vs result
   changed_when: false
   failed_when: false
-  ignore_errors: yes
   loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
   loop_control:
-    loop_var: forkItem
+    loop_var: mavenoForksForkItem
   tags: certificates
 
 

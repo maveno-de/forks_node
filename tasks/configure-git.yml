@@ -3,12 +3,12 @@
 
 - name: "Add {{ forkIdentifier|capitalize }} farmer CA certs and create new client certs"
   when: forkBuildRequirementsDescriptor.startOption == 'harvester'
-  become: yes
+  become: true
   tags: certificates
   block:
 
     - name: "Ensure {{ forkIdentifier|capitalize }} CA cert(s) local directory"
-      become: yes
+      become: true
       file:
         path: "{{ forkHomeDirectory }}/.{{ forkIdentifier }}-cacert"
         state: directory
@@ -25,7 +25,7 @@
         contextProductDirectory: "{{ forkHomeDirectory }}/.{{ forkIdentifier }}-cacert/ca"
         contextSystemUser: "{{ forkSystemUsername }}"
       include_tasks: productStore.yml
-      
+
     - name: "Create {{ forkIdentifier|capitalize }} new client certs"
       become_user: "{{ forkSystemUsername }}"
       shell: >
@@ -35,13 +35,14 @@
       args:
         chdir: "{{ forkApplicationDirectory }}"
         executable: /bin/bash
+      changed_when: true
 
 
 - name: "Add {{ forkIdentifier|capitalize }} wallet key"
-  when: 
+  when:
     - forkBuildRequirementsDescriptor.startOption != 'harvester'
     - "'mnemonics' in (lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forkIdentifier].keys()"
-  become: yes
+  become: true
   block:
 
     - name: "Place {{ forkIdentifier|capitalize }} mnemonics file"
@@ -61,6 +62,9 @@
       args:
         chdir: "{{ forkApplicationDirectory }}"
         executable: /bin/bash
+      # TODO: Rückgabewert auswerten
+      changed_when: true
+
 
   always:
     - name: Remove mnemonics file
@@ -69,35 +73,35 @@
         state: absent
 
 
-  ## Firewall
+  # Firewall
 
 - name: "Allow {{ forkIdentifier|capitalize }} node network traffic"
-  when: 
+  when:
     - "'nodePort' in forkBuildRequirementsDescriptor.keys()"
     - forkBuildRequirementsDescriptor.startOption != 'harvester'
-  become: yes
+  become: true
   ufw:
     rule: allow
     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
     proto: tcp
 
-   #TODO: Man kann den Port nicht schließen wenn unbekannt....
-#- name: "Deny {{ forkIdentifier|capitalize }} node network traffic"
-#  when: >
-#    not 'nodePort' in forkBuildRequirementsDescriptor.keys()
-#    or forkBuildRequirementsDescriptor.startOption == 'harvester'
-#  become: yes
-#  ufw:
-#    rule: allow
-#    port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
-#    proto: tcp
-#    delete: yes
+    # TODO: Man kann den Port nicht schließen wenn unbekannt....
+# - name: "Deny {{ forkIdentifier|capitalize }} node network traffic"
+#   when: >
+#     not 'nodePort' in forkBuildRequirementsDescriptor.keys()
+#     or forkBuildRequirementsDescriptor.startOption == 'harvester'
+#   become: true
+#   ufw:
+#     rule: allow
+#     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
+#     proto: tcp
+#     delete: yes
 
 - name: "Allow {{ forkIdentifier|capitalize }} farmer network traffic"
-  when: 
+  when:
     - "'farmerPort' in forkBuildRequirementsDescriptor.keys()"
     - forkBuildRequirementsDescriptor.startOption != 'harvester'
-  become: yes
+  become: true
   ufw:
     rule: allow
     port: "{{ forkBuildRequirementsDescriptor.farmerPort }}"
@@ -107,19 +111,19 @@
   # Cronjobs
 
 - name: "Adds paths to CA certs to {{ forkIdentifier|capitalize }} crontab"
-  become: yes
+  become: true
   cron:
     name: REQUESTS_CA_BUNDLE
     user: "{{ forkSystemUsername }}"
-    env: yes
+    env: true
     job: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 - name: "Adds certs path to {{ forkIdentifier|capitalize }} crontab"
-  become: yes
+  become: true
   cron:
     name: SSL_CERT_DIR
     user: "{{ forkSystemUsername }}"
-    env: yes
+    env: true
     job: /etc/ssl/certs
 
 
@@ -129,11 +133,11 @@
   when:
     - forkBuildRequirementsDescriptor.updateHour is defined
     - forkBuildRequirementsDescriptor.updateMinute is defined
-  become: yes
+  become: true
   template:
     src: update-git.sh.j2
     dest: "{{ mavenoManagingLocalBinaryDirectory }}/update-{{ forkIdentifier }}.sh"
-    force: yes
+    force: true
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
     mode: 0750
@@ -143,7 +147,7 @@
   when:
     - forkBuildRequirementsDescriptor.updateHour is defined
     - forkBuildRequirementsDescriptor.updateMinute is defined
-  become: yes
+  become: true
   cron:
     name: "{{ forkIdentifier|capitalize }} daily auto-update"
     user: "{{ mavenoManagingSystemUsername }}"
@@ -154,7 +158,7 @@
 
 
 - name: Slurp .bashrc file from managing user
-  become: yes
+  become: true
   slurp:
     src: "{{ mavenoManagingHomeDirectory }}/.bashrc"
   register: managingUserBashRcResult
@@ -165,10 +169,10 @@
     managingUserBashRcFileContent: "{{ managingUserBashRcResult['content'] | b64decode }}"
   tags: utilities
 
-  #TODO: Separate into utils/services
+  # TODO: Separate into utils/services
 - name: "Adding aliases for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
   when: not forkBuildRequirementsDescriptor.alias|default(forkIdentifier) in managingUserBashRcFileContent
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
     line: |
@@ -179,42 +183,49 @@
   tags: utilities
 
 - name: "Adding tail alias for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
-  become: yes
+  become: true
+  vars:
+    forksAliasCommandLine: >-
+      alias tail_{{ forkBuildRequirementsDescriptor.alias
+      | default(forkIdentifier) }}="sudo tail -f {{ forkConfigurationDirectory }}/mainnet/log/debug.log"
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
-    line: "alias tail_{{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}=\"sudo tail -f {{ forkConfigurationDirectory }}/mainnet/log/debug.log\""
+    line: "{{ forksAliasCommandLine }}"
     insertafter: '^#NON-INTERACTIVE.*'
   tags: utilities
 
 - name: "Adding log inspector alias for {{ forkIdentifier|capitalize }} to .bashrc of managing user"
   when: "'fullnode' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
+  vars:
+    forkAliasCommandLine: >-
+      alias inspect_{{ forkBuildRequirementsDescriptor.alias
+      | default(forkIdentifier) }}="{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer
+      --log={{ forkConfigurationDirectory }}/mainnet/log/debug.log"
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
-    line: "alias inspect_{{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}=\"{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer --log={{ forkConfigurationDirectory }}/mainnet/log/debug.log\""
+    line: "{{ forkAliasCommandLine }}"
     insertafter: '^#NON-INTERACTIVE.*'
   tags: utilities
 
 
-## Active Farmers
+# Active Farmers
 
 - name: "Appending invocation of showFarmer for {{ forkIdentifier|capitalize }} instance"
   when: "'farmer' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.local/bin/show_farmers.sh"
     line: "showFarmer {{ forkServiceName }}"
     insertafter: EOL
   tags: utilities
 
+  # Wallet kicker
 
-
-  ## Wallet kicker
-
-  #HINT: <forkUsername> <configDirName> <executableName> <restartCommand>
+  # HINT: <forkUsername> <configDirName> <executableName> <restartCommand>
 - name: "Appending invocation of wallet kick for {{ forkIdentifier|capitalize }} instance"
   when: "'wallet' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-git.sh"
     line: >
@@ -227,7 +238,7 @@
 
 - name: Ensure cron job for wallet kicker script
   when: "'wallet' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   cron:
     name: "Kick lazy wallets"
     user: "{{ mavenoManagingSystemUsername }}"
@@ -241,7 +252,7 @@
 
 - name: Adding aliases for showing node performance to shell of managing user
   when: "'fullnode' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
     line: "alias node_performance=\"{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py\""
@@ -250,7 +261,7 @@
 
 - name: "Adding log file for {{ forkIdentifier|capitalize }}"
   when: "'fullnode' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py"
     line: "    ('{{ forkBuildRequirementsDescriptor.alias|default(forkIdentifier) }}', '{{ forkConfigurationDirectory }}/mainnet/log/debug.log'),"
@@ -260,7 +271,7 @@
 
 - name: Set forktools to be installed
   set_fact:
-    mavenoForksInstallForktools: yes
+    mavenoForksInstallForktools: true
   tags: utilities
 
 

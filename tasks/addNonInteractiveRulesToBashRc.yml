@@ -5,15 +5,15 @@
 # contextBashRcFilePaths
 
 - name: Add non-interactive rule to .bashrc file
-  become: yes
+  become: true
   lineinfile:
     path: "{{ contextBashRcFilePath }}"
     state: present
     insertafter: '^#NON-INTERACTIVE$'
-    line: "{{ nonInteractiveRuleItem }}"
+    line: "{{ mavenoForksNonInteractiveRuleItem }}"
   loop: "{{ (contextNonInteractiveRules is string)|ternary([contextNonInteractiveRules],contextNonInteractiveRules|reverse|list) }}"
   loop_control:
-    loop_var: nonInteractiveRuleItem
+    loop_var: mavenoForksNonInteractiveRuleItem
 
 
 ...

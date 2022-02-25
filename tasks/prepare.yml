@@ -2,51 +2,52 @@
 
 
 - name: Update local CA certs
-  become: yes
-  shell: update-ca-certificates
+  become: true
+  command: update-ca-certificates
+  register: updateCaCertsCommandResult
+  changed_when: updateCaCertsCommandResult.rc == 0
 
 
-  #HINT: Stopping all running services to prevent timeouts
+  # HINT: Stopping all running services to prevent timeouts
   # when building due to cpu time consumption
 - name: Stop Chia fork services
   when: forkBuildRequirementsDescriptor.buildOption == 'git'
   vars:
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
-    forkIdentifier: "{{ forkItem }}"
+    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[mavenoForksForkItem] }}"
+    forkIdentifier: "{{ mavenoForksForkItem }}"
     forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
-  become: yes
+  become: true
   systemd:
     name: "{{ forkServiceName }}.service"
     state: stopped
   changed_when: false
   failed_when: false
-  ignore_errors: yes
   loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
   loop_control:
-    loop_var: forkItem
+    loop_var: mavenoForksForkItem
 
 
 - name: Adding aliases for showing temp and CPU clock to shell of managing user
-  when: >
+  when: >-
     ansible_lsb.id == 'Raspbian'
     or 'raspi' in ansible_kernel and ansible_distribution == 'Ubuntu'
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
-    line: "{{ forkCommandLineItem }}"
+    line: "{{ mavenoForksCommandLineItem }}"
     insertafter: '^#NON-INTERACTIVE.*'
   loop:
     - alias show_temp='watch -n 1 sudo vcgencmd measure_temp'
     - alias show_clock='watch -n 1 sudo vcgencmd measure_clock arm'
   loop_control:
-    loop_var: forkCommandLineItem
+    loop_var: mavenoForksCommandLineItem
   tags: utilities
 
 
 - name: Ensure local directories for managing user
-  become: yes
+  become: true
   file:
-    path: "{{ mavenoManagingHomeDirectory }}/.local/{{ forkLocalDirectoryItem }}"
+    path: "{{ mavenoManagingHomeDirectory }}/.local/{{ mavenoForksLocalDirectoryItem }}"
     state: directory
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
@@ -58,23 +59,24 @@
     - lib/fork.blockchain.root
     - lib/fork.config.root
   loop_control:
-    loop_var: forkLocalDirectoryItem
+    loop_var: mavenoForksLocalDirectoryItem
   tags: [utilities, services]
 
-  
+
 - name: Install Chia Loganalyzer executable
   include_tasks: buildLogAnalyzer.yml
 
 
-- name: Switch temporarily to system python
-  set_fact: 
+- name: Store location of current python venv
+  set_fact:
     tempPythonInterpreter: "{{ ansible_python_interpreter }}"
-- set_fact: 
+- name: Switch temporarily to system python
+  set_fact:
     ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
-###
+# ###
 
 - name: Install required apt packages
-  become: yes
+  become: true
   apt:
     pkg:
       - acl
@@ -82,12 +84,11 @@
       - screen
       - xz-utils
       - sysstat
-    state: latest
     cache_valid_time: 10800
 
-##
+# ###
 - name: Switch back to framework python venv
-  set_fact: 
+  set_fact:
     ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
@@ -95,11 +96,11 @@
   include_tasks: enhancePerformance.yml
 
 
-## Backup
+# Backup
 
 - name: Ensure backup data directory
   when: mavenoForksBackupDataDirectory is defined
-  become: yes
+  become: true
   file:
     path: "{{ mavenoForksBackupDataDirectory }}"
     state: directory
@@ -110,11 +111,11 @@
 
 - name: Generate backup script template
   when: mavenoForksBackupDataDirectory is defined
-  become: yes
+  become: true
   template:
     src: backup-forks.sh.j2
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/backup-forks.sh"
-    force: yes
+    force: true
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
     mode: 0755

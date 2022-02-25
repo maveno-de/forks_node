@@ -85,7 +85,7 @@
 
     - name: Decrypt working file
       when: statResult.stat.exists
-      no_log: yes
+      no_log: true
       delegate_to: localhost
       vars:
         vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
@@ -138,7 +138,7 @@
       
     - name: Decrypt copy of product file
       when: statResult.stat.exists
-      no_log: yes
+      no_log: true
       delegate_to: localhost
       vars:
         vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
@@ -166,7 +166,7 @@
       # Encrypt updated working file
     - name: Encrypting
       delegate_to: localhost
-      no_log: yes
+      no_log: true
       vars:
         vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
       expect:
@@ -215,7 +215,7 @@
   block:
 
     - name: Create temp directory for backup
-      become: yes
+      become: true
       file:
         state: directory
         path: "{{ mavenoManagingHomeDirectory }}/.tmp/product/"
@@ -224,7 +224,7 @@
         mode: 0700
 
     - name: Gzipping directory
-      become: yes
+      become: true
       archive:
         path: "{{ contextProductDirectory }}"
         dest: "{{ mavenoManagingHomeDirectory }}/.tmp/product/{{ productTarGzArchiveName }}"
@@ -234,7 +234,7 @@
         mode: 0700
 
     - name: Fetch zipped file/directory
-      become: yes
+      become: true
       become_user: "{{ mavenoManagingSystemUsername }}"
       fetch:
         src: "{{ mavenoManagingHomeDirectory }}/.tmp/product/{{ productTarGzArchiveName }}"
@@ -246,7 +246,7 @@
     - name: Set permissions on fetched product file
       when: ansible_user != 'root'
       delegate_to: localhost
-      become: yes
+      become: true
       file:
         path: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
         owner: "{{ lookup('env','USER') }}"
@@ -255,7 +255,7 @@
 
     - name: Encrypt archived product file/directory
       delegate_to: localhost
-      no_log: yes
+      no_log: true
       vars:
         vaultPassword: "{{ (lookup('file', 'files/credentials/' + mavenoVendorIdentifier + '.yml')|from_yaml).vault.password }}"
       expect:
@@ -269,7 +269,7 @@
   always:
 
     - name: Delete remote archive file
-      become: yes
+      become: true
       file:
         state: absent
         path: "{{ mavenoManagingHomeDirectory }}/.tmp/product"
@@ -278,14 +278,14 @@
   ## Restore directory/file
 
 - name: Restore file/directory from product
-  become: yes
+  become: true
   when: contextProductStoreAction == 'restore'
   unarchive:
     src: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
     dest: "{{ contextProductDirectory|dirname }}"
 
 - name: "Restore file/directory from product for user {{ contextSystemUser }}"
-  become: yes
+  become: true
   when: 
     - contextProductStoreAction == 'restore'
     - contextSystemUser is defined

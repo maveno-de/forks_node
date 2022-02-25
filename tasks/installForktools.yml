@@ -2,7 +2,7 @@
 
 
 - name: Remove forkstools directory
-  become: yes
+  become: true
   file:
     path: "{{ mavenoManagingHomeDirectory }}/.local/opt/forktools"
     state: directory
@@ -12,31 +12,32 @@
   tags: utilities
 
 - name: Clone forktools repository
-  become: yes
+  become: true
   become_user: "{{ mavenoManagingSystemUsername }}"
   git:
     repo: https://github.com/maveno-de/forktools.git
     dest: "{{ mavenoManagingHomeDirectory }}/.local/opt/forktools"
-    force: yes
+    force: true
   tags: utilities
 
 - name: Make forktools installer executable
-  become: yes
+  become: true
   file:
     path: "{{ mavenoManagingHomeDirectory }}/.local/opt/forktools/installft.sh"
     mode: u+x
   tags: utilities
 
 - name: Setup Qwinns Forktools
-  become: yes
+  become: true
   become_user: "{{ mavenoManagingSystemUsername }}"
-  shell: ./installft.sh
+  command: ./installft.sh
   args:
-    executable: /bin/bash
     chdir: "{{ mavenoManagingHomeDirectory }}/.local/opt/forktools"
   environment:
     FORKTOOLSBLOCKCHAINDIRS: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.blockchain.root"
     FORKTOOLSHIDDENDIRS: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.config.root"
+  register: installForktoolsCommandResult
+  changed_when: installForktoolsCommandResult.rc == 0
   tags: utilities
 
 

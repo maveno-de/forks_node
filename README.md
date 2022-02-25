@@ -86,10 +86,10 @@ forks:
           nodePort: 8444
           farmerPort: 8447
           startOption: fullnode+farmer
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 5
           updateMinute: 0
-          backup: yes
+          backup: true
 
         chives:
           buildOption: git
@@ -97,11 +97,11 @@ forks:
           nodePort: 9699
           #farmerPort: 9647
           startOption: fullnode+farmer
-          lightFullNode: yes
-          permissionsFix: yes
+          lightFullNode: true
+          permissionsFix: true
           updateHour: 5
           updateMinute: 30
-          backup: yes
+          backup: true
 
         skynet:
           buildOption: git
@@ -115,10 +115,10 @@ forks:
             - libgmp3-dev
             - libboost-all-dev
           startOption: fullnode+farmer
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 7
           updateMinute: 0
-          backup: yes
+          backup: true
 
         hddcoin:
           buildOption: git
@@ -128,10 +128,10 @@ forks:
           nodePort: 28444
           #farmerPort: 28447
           startOption: fullnode+farmer
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 7
           updateMinute: 15
-          backup: yes
+          backup: true
 
         silicoin:
           buildOption: git
@@ -143,10 +143,10 @@ forks:
           nodePort: 22222
           farmerPort: 11447
           startOption: fullnode+farmer
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 5
           updateMinute: 45
-          backup: yes
+          backup: true
 
 
     <Hostname node2>:
@@ -208,7 +208,7 @@ forks:
           #nodeRpcPort: 8555
           farmerPort: 8447
           fullnodeName: wallet1
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 5
           updateMinute: 0
           instances:
@@ -224,7 +224,7 @@ forks:
           #nodeRpcPort: 9755
           farmerPort: 9647
           fullnodeName: wallet1
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 5
           updateMinute: 30
           instances:
@@ -240,7 +240,7 @@ forks:
           #nodeRpcPort: 28555
           farmerPort: 28447
           fullnodeName: wallet1
-          lightFullNode: yes
+          lightFullNode: true
           updateHour: 7
           updateMinute: 15
           instances:
@@ -261,7 +261,7 @@ This is a basic playbook for the application of the role.
 - name: Build Chia Forks
   hosts: forks
   remote_user: "{{ mavenoManagingSystemUsername }}"
-  gather_facts: yes
+  gather_facts: true
   tasks:
 
     - name: Switch to Python virtual environment of framework service

@@ -2,45 +2,44 @@
 
 
 - name: "Remove {{ forkIdentifier|capitalize }} application directory"
-  become: yes
-  file: 
+  become: true
+  file:
     path: "{{ forkApplicationDirectory }}"
     state: absent
 
 
 - name: "Clone {{ forkIdentifier|capitalize }} blockchain repository into source directory"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
   git:
     dest: "{{ forkApplicationDirectory }}"
     repo: "https://github.com/{{ forkBuildRequirementsDescriptor.repositoryIdentifier }}.git"
-    force: yes
-    update: yes
-    recursive: yes
+    force: true
+    update: true
+    recursive: true
     version: "{{ forkBuildRequirementsDescriptor.branch|default(mavenoForksDefaultBranch) }}"
 
 - name: Make installer executable
-  become: yes
-  file: 
+  become: true
+  file:
     path: "{{ forkApplicationDirectory }}/install.sh"
     mode: 0750
 
 
 - name: "Install {{ forkIdentifier|capitalize }} blockchain"
   when: not 'buildEnvVars' in forkBuildRequirementsDescriptor.keys()
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
-  shell: ./install.sh
+  command: ./install.sh
   args:
     chdir: "{{ forkApplicationDirectory }}"
-    executable: /bin/sh
   async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   poll: 0
   register: installBlockchainJob
 
 - name: "Wait for {{ forkIdentifier|capitalize }} blockchain being installed"
   when: not 'buildEnvVars' in forkBuildRequirementsDescriptor.keys()
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
   async_status:
     jid: "{{ installBlockchainJob.ansible_job_id }}"
@@ -51,12 +50,11 @@
 
 - name: "Install {{ forkIdentifier|capitalize }} blockchain (additional environment variables)"
   when: "'buildEnvVars' in forkBuildRequirementsDescriptor.keys()"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
-  shell: ./install.sh
+  command: ./install.sh
   args:
     chdir: "{{ forkApplicationDirectory }}"
-    executable: /bin/sh
   environment: "{{ forkBuildRequirementsDescriptor.buildEnvVars }}"
   async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   poll: 0
@@ -64,7 +62,7 @@
 
 - name: "Wait for {{ forkIdentifier|capitalize }} blockchain being installed (additional environment variables)"
   when: "'buildEnvVars' in forkBuildRequirementsDescriptor.keys()"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
   async_status:
     jid: "{{ installBlockchainJob.ansible_job_id }}"
@@ -75,30 +73,33 @@
 
 
 - name: "Remove {{ forkIdentifier|capitalize }} system user from sudo group"
-  become: yes
-  shell: "deluser {{ forkSystemUsername }} sudo"
+  become: true
+  command: "deluser {{ forkSystemUsername }} sudo"
+  register: removeUserFromGroupCommandResult
+  failed_when: false
+  changed_when: removeUserFromGroupCommandResult.rc == 0
 
 
   ## Fix permissions
 
 - name: "Fix {{ forkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
   when: forkPermissionsFix
-  become: yes
+  become: true
   file:
     path: "{{ forkApplicationDirectory }}/mozilla-ca"
     state: directory
-    recurse: yes
+    recurse: true
     owner: "{{ forkSystemUsername }}"
     group: "{{ forkSystemUsername }}"
     mode: u=rwX,g=rX,o=rX
 
 - name: "Fix {{ forkIdentifier|capitalize }} ssl permissions"
   when: forkPermissionsFix
-  become: yes
+  become: true
   file:
     path: "{{ forkConfigurationDirectory }}/mainnet/config/ssl"
     state: directory
-    recurse: yes
+    recurse: true
     owner: "{{ forkSystemUsername }}"
     group: "{{ forkSystemUsername }}"
     mode: u=rwX,g=,o=
@@ -107,7 +108,7 @@
 ## Initialize blockchain
 
 - name: "Initialize {{ forkIdentifier|capitalize }} blockchain"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
   shell: >
     . {{ forkApplicationDirectory }}/venv/bin/activate &&
@@ -116,12 +117,13 @@
   args:
     chdir: "{{ forkApplicationDirectory }}"
     executable: /bin/bash
+  changed_when: false
   async: "{{ (1800 * mavenoJobTimeFactor)|int }}" # 30 mins * time factor
   poll: 0
   register: initializeBlockchainJob
 
 - name: "Wait for {{ forkIdentifier|capitalize }} blockchain being initialized"
-  become: yes
+  become: true
   become_user: "{{ forkSystemUsername }}"
   async_status:
     jid: "{{ initializeBlockchainJob.ansible_job_id }}"
@@ -143,18 +145,18 @@
   tags: certificates
 
 - name: "Generate {{ forkIdentifier|capitalize }} service file"
-  become: yes
+  become: true
   template:
     src: "fork-git.service.j2"
     dest: "{{ mavenoSystemServiceDirectory }}/{{ forkServiceName }}.service"
-    force: yes
+    force: true
     owner: root
     group: root
     mode: 0644
 
 
 - name: Link {{ forkIdentifier|capitalize }} blockchain directory in Forktools root directory
-  become: yes
+  become: true
   file:
     src: "{{ forkApplicationDirectory }}"
     dest: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.blockchain.root/{{ forkApplicationDirectory|basename }}"
@@ -162,7 +164,7 @@
   tags: utilities
 
 - name: Link {{ forkIdentifier|capitalize }} configuration directory in Forktools root directory
-  become: yes
+  become: true
   file:
     src: "{{ forkConfigurationDirectory }}"
     dest: "{{ mavenoManagingHomeDirectory }}/.local/lib/fork.config.root/{{ forkConfigurationDirectory|basename }}"

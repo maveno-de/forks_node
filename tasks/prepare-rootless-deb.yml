@@ -1,15 +1,13 @@
 ---
 
 
-
-
 - name: Determine latest containerd package version
   maveno_source_https:
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: containerd.io_
     suffix: "_{{ mavenoSystemArchitecture }}.deb"
-    checkResult: no
-    simple: yes
+    checkResult: false
+    simple: true
   register: containerdIoSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
@@ -20,8 +18,8 @@
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-cli_'
     suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
-    checkResult: no
-    simple: yes
+    checkResult: false
+    simple: true
   register: dockerCeCliSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
@@ -32,8 +30,8 @@
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce_'
     suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
-    checkResult: no
-    simple: yes
+    checkResult: false
+    simple: true
   register: dockerCeSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
@@ -43,29 +41,29 @@
   maveno_source_https:
     url: "https://download.docker.com/linux/{{ ansible_lsb['id']|lower }}/dists/{{ ansible_distribution_release }}/pool/stable/{{ mavenoSystemArchitecture }}/"
     filePrefix: 'docker-ce-rootless-extras_'
-    suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"  
-    checkResult: no
-    simple: yes
+    suffix: "{{ ansible_lsb['id']|lower }}-{{ ansible_distribution_release }}_{{ mavenoSystemArchitecture }}.deb"
+    checkResult: false
+    simple: true
   register: dockerCeRootlessExtrasSourceHttpsResult
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
     REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
 
-- name: Switch temporarily to system python
-  set_fact: 
+- name: Store location of current python venv
+  set_fact:
     tempPythonInterpreter: "{{ ansible_python_interpreter }}"
-- set_fact: 
+- name: Switch temporarily to system python
+  set_fact:
     ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
-###
+# ###
 
 - name: Install Docker system packages for rootless mode (Debian family)
-  when: 
+  when:
     - ansible_facts['os_family'] == 'Debian'
     - forkSystemUsername != ''
-  become: yes
+  become: true
   apt:
-    state: latest
     pkg: uidmap
 
 - name: Install RPi extra modules (Ubuntu 21.10 RPi)
@@ -75,15 +73,14 @@
       ansible_distribution_version == '21.10'
       or ansible_distribution_major_version > '21'
     - "'raspi' in ansible_kernel"
-  become: yes
+  become: true
   apt:
-    state: latest
     pkg: linux-modules-extra-raspis
 
 
 - name: Remove Docker CE
   when: ansible_facts['os_family'] == 'Debian'
-  become: yes
+  become: true
   apt:
     name:
       - docker-ce-rootless-extras
@@ -91,12 +88,12 @@
       - docker-ce-cli
       - containerd.io
     state: absent
-  
+
 - name: Install Docker CE
   when: ansible_facts['os_family'] == 'Debian'
-  become: yes
+  become: true
   apt:
-    deb: "{{ dockerCeDebPackageUrlItem }}"
+    deb: "{{ mavenoForksDockerCeDebPackageUrlItem }}"
     cache_valid_time: 10800
   loop:
     - "{{ containerdIoSourceHttpsResult.recommended_url }}"
@@ -104,14 +101,14 @@
     - "{{ dockerCeSourceHttpsResult.recommended_url }}"
     - "{{ dockerCeRootlessExtrasSourceHttpsResult.recommended_url }}"
   loop_control:
-    loop_var: dockerCeDebPackageUrlItem
+    loop_var: mavenoForksDockerCeDebPackageUrlItem
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
     REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
 
-###
+# ###
 - name: Switch back to framework python venv
-  set_fact: 
+  set_fact:
     ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
@@ -123,12 +120,12 @@
 
 
 - name: Stop and disable system docker service
-  become: yes
+  become: true
   systemd:
     name: docker.service
-    enabled: no
+    enabled: false
     state: stopped
-    daemon_reload: yes
+    daemon_reload: true
 
 
 ...

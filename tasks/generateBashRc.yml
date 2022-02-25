@@ -1,7 +1,6 @@
 ---
 
-##
-#
+
 # Required:
 # contextSystemUsername
 # contextHomeDirectory
@@ -12,77 +11,81 @@
 # contextInteractiveRules
 # [contextRemoveExistingFile]
 
-#- name: Remove existing .bashrc file
-#  when: contextRemoveExistingFile|default(false)
-#  become: yes
-#  file:
-#    path: "{{ contextHomeDirectory }}/.bash_profile"
-#    state: absent 
+# - name: Remove existing .bashrc file
+#   when: contextRemoveExistingFile|default(false)
+#   become: true
+#   file:
+#     path: "{{ contextHomeDirectory }}/.bash_profile"
+#     state: absent
 
-- name: Generate .bashrc configuration
+- name: Generate .bashrc configuration (Ubuntu)
   when: ansible_facts['distribution'] == 'Ubuntu'
-  become: yes
+  become: true
   block:
-    - name: Generate .bashrc configuration
+    - name: Generate .bash_profile (Ubuntu)
       template:
         src: bashrc/bash.profile.j2
         dest: "{{ contextHomeDirectory }}/.bash_profile"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
-    - template:
+        force: true
+    - name: Generate .bashrc (Ubuntu)
+      template:
         src: bashrc/bashrc.ubuntu.j2
         dest: "{{ contextHomeDirectory }}/.bashrc"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
+        force: true
 
-- name: Generate .bashrc configuration
-  when: 
+- name: Generate .bashrc configuration (Raspbian 10+)
+  when:
     - "'id' in ansible_facts['lsb']"
     - ansible_facts['lsb']['id'] == 'Raspbian'
     - ansible_facts['distribution_major_version']|int >= 10
-  become: yes
+  become: true
   block:
-    - name: Generate .bashrc configuration
+    - name: Generate .bash_profile (Raspbian 10+)
       template:
         src: bashrc/bash.profile.j2
         dest: "{{ contextHomeDirectory }}/.bash_profile"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
-    - template:
+        force: true
+    - name: Generate .bashrc (Raspbian 10+)
+      template:
         src: bashrc/bashrc.raspbian10.j2
         dest: "{{ contextHomeDirectory }}/.bashrc"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
+        force: true
 
-- name: Generate .bashrc configuration
-  when: 
+- name: Generate .bashrc configuration (CentOS)
+  when:
     - ansible_facts['distribution'] == 'CentOS'
     - ansible_facts['distribution_major_version'] == '8'
-  become: yes
+  become: true
   block:
 
-    - name: Generate .bashrc configuration
+    - name: Generate .bash_profile (CentOS)
       template:
         src: bashrc/bash.profile.j2
         dest: "{{ contextHomeDirectory }}/.bash_profile"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
-    - template:
+        force: true
+    - name: Generate .bashrc (CentOS)
+      template:
         src: bashrc/bashrc.centos8.j2
         dest: "{{ contextHomeDirectory }}/.bashrc"
         owner: "{{ contextSystemUsername }}"
         group: "{{ contextSystemUsername }}"
         mode: 0640
-        force: yes
+        force: true
+
 
 ...

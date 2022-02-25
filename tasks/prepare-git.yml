@@ -2,7 +2,7 @@
 
 
 - name: "Ensure {{ forkIdentifier|capitalize }} system user"
-  become: yes
+  become: true
   user:
     name: "{{ forkSystemUsername }}"
     home: "{{ forkHomeDirectory }}"
@@ -11,7 +11,7 @@
     comment: "{{ forkIdentifier|capitalize }}"
 
 - name: Ensure remote temp dir for ansible
-  become: yes
+  become: true
   file:
     path: "{{ forkHomeDirectory }}/.ansible/tmp"
     state: directory
@@ -20,19 +20,19 @@
     mode: 0700
 
 - name: "Set permissions on {{ forkIdentifier|capitalize }} home directory"
-  become: yes
+  become: true
   file:
     path: "{{ forkHomeDirectory }}"
     state: directory
     owner: "{{ forkSystemUsername }}"
     group: "{{ forkSystemUsername }}"
-    recurse: yes
-    follow: no
+    recurse: true
+    follow: false
     mode: o=
 
 
 - name: Ensure .ssh directory for {{ forkIdentifier|capitalize }} system user"
-  become: yes
+  become: true
   file:
     path: "{{ forkHomeDirectory }}/.ssh"
     state: directory
@@ -41,7 +41,7 @@
     mode: 0700
 
 - name: "Adding SSH public keys to user {{ forkSystemUsername }}"
-  become: yes
+  become: true
   authorized_key:
     user: "{{ forkSystemUsername }}"
     key: "{{ mavenoPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
@@ -52,7 +52,7 @@
   vars:
     contextSystemUsername: "{{ forkSystemUsername }}"
     contextHomeDirectory: "{{ forkHomeDirectory }}"
-    contextUserPaths: 
+    contextUserPaths:
       - "{{ forkApplicationDirectory }}"
     contextNonInteractiveRules:
       - ". {{ forkApplicationDirectory }}/venv/bin/activate"
@@ -60,7 +60,7 @@
 
 
 - name: "Ensure local shared directory for user {{ forkSystemUsername }}"
-  become: yes
+  become: true
   file:
     path: "{{ forkSharedDirectory }}"
     state: directory
@@ -69,7 +69,7 @@
     mode: 0750
 
 - name: "Ensure local binary directory for user {{ forkSystemUsername }}"
-  become: yes
+  become: true
   file:
     path: "{{ forkBinaryDirectory }}"
     state: directory
@@ -78,7 +78,7 @@
     mode: 0750
 
 - name: "Ensure local binary directory for user {{ forkSystemUsername }}"
-  become: yes
+  become: true
   file:
     path: "{{ forkBinaryDirectory }}"
     state: directory
@@ -91,23 +91,23 @@
   when: "'aptPackages' in forkBuildRequirementsDescriptor.keys()"
   block:
 
-    - name: Switch temporarily to system python
-      set_fact: 
+    - name: Store location of current python venv
+      set_fact:
         tempPythonInterpreter: "{{ ansible_python_interpreter }}"
-    - set_fact: 
+    - name: Switch temporarily to system python
+      set_fact:
         ansible_python_interpreter: "{{ mavenoSystemPythonInterpreter }}"
-    ###
+    # ###
 
     - name: "Install additional apt packages for {{ forkIdentifier|capitalize }}"
-      become: yes
+      become: true
       apt:
         pkg: "{{ forkBuildRequirementsDescriptor.aptPackages }}"
-        state: latest
         cache_valid_time: 10800
 
-    ###
+    # ###
     - name: Switch back to framework python venv
-      set_fact: 
+      set_fact:
         ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
@@ -115,7 +115,7 @@
 
 - name: "Ensure {{ forkIdentifier|capitalize }} backup data directory"
   when: mavenoForksBackupDataDirectory is defined
-  become: yes
+  become: true
   file:
     path: "{{ mavenoForksBackupDataDirectory }}/{{ forkIdentifier }}"
     state: directory
@@ -124,18 +124,17 @@
     mode: 0700
 
 
-
-## Active farmers
+# Active farmers
 
 - name: Generate farmer status script
   when:
     - not forkFarmerStatusScriptCreated is defined
     - "'farmer' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   template:
     src: show_farmers.sh.j2
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/show_farmers.sh"
-    force: yes
+    force: true
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
     mode: 0755
@@ -143,28 +142,29 @@
 
 - name: Adding alias for showing active farmers to shell of managing user
   when:
-    - not forkFarmerStatusScriptCreated is defined 
+    - not forkFarmerStatusScriptCreated is defined
     - "'farmer' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   lineinfile:
     path: "{{ mavenoManagingHomeDirectory }}/.bashrc"
     line: "alias show_farmers=\"{{ mavenoManagingHomeDirectory }}/.local/bin/show_farmers.sh\""
     insertafter: '^#NON-INTERACTIVE.*'
   tags: utilities
 
-- set_fact:
-    forkFarmerStatusScriptCreated: yes
+- name: Set flag for status script created
+  set_fact:
+    forkFarmerStatusScriptCreated: true
   when: "'farmer' in forkBuildRequirementsDescriptor.startOption"
   tags: utilities
 
 
-## Node performance
+# Node performance
 
 - name: Generate node performance script
   when:
-    - not forkNodePerformanceScriptCreated is defined 
+    - not forkNodePerformanceScriptCreated is defined
     - "'fullnode' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   template:
     src: node_performance.py.j2
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/node_performance.py"
@@ -173,29 +173,32 @@
     mode: 0750
   tags: utilities
 
-- set_fact:
-    forkNodePerformanceScriptCreated: yes
+- name: Set flag for performance script created
+  set_fact:
+    forkNodePerformanceScriptCreated: true
   when: "'fullnode' in forkBuildRequirementsDescriptor.startOption"
   tags: utilities
 
-## Wallet kicker
+
+# Wallet kicker
 
 - name: Generate wallet kicker script template
-  when: 
+  when:
     - not forkWalletKickerScriptGitCreated is defined
     - "'wallet' in forkBuildRequirementsDescriptor.startOption"
-  become: yes
+  become: true
   template:
     src: wallet-kicker-git.sh.j2
     dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-git.sh"
-    force: yes
+    force: true
     owner: "{{ mavenoManagingSystemUsername }}"
     group: "{{ mavenoManagingSystemUsername }}"
     mode: 0755
   tags: services
 
-- set_fact:
-    forkWalletKickerScriptGitCreated: yes
+- name: Set flag for wallet kicker script created
+  set_fact:
+    forkWalletKickerScriptGitCreated: true
   when: "'wallet' in forkBuildRequirementsDescriptor.startOption"
   tags: services
 
