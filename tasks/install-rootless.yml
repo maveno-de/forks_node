@@ -13,7 +13,7 @@
     contextNonInteractiveRules:
       - export XDG_RUNTIME_DIR=/run/user/$(id -u)
       - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
-  include_tasks: addNonInteractiveRulesToBashRc.yml
+  include_tasks: addNonInteractiveBashRcRules.yml
 
 - name: "Install rootless docker for user {{ forkSystemUsername }}"
   become: true
