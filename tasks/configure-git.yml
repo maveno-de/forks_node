@@ -95,7 +95,7 @@
 #     rule: allow
 #     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
 #     proto: tcp
-#     delete: yes
+#     delete: true
 
 - name: "Allow {{ forkIdentifier|capitalize }} farmer network traffic"
   when:

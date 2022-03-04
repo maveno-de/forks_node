@@ -114,6 +114,8 @@
 
 
   # TODO #225: Checks projektweit umstellen wie hier
+  ## ## ##
+  # RESULT: forkDockerServiceStatusResult.status.ActiveState ==/!= 'active'
 - name: "Check Docker service for user {{ forkSystemUsername }}"
   become: true
   become_user: "{{ forkSystemUsername }}"

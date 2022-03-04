@@ -1,8 +1,8 @@
 ---
 
-#TODO: Requirement: alles was Prefix 'context' darf nicht als Fact gesetzt werden
+# TODO: Requirement: alles was Prefix 'context' darf nicht als Fact gesetzt werden
 
-## Parameters
+# Parameters
 
 # contextSystemUser
 
@@ -30,24 +30,24 @@
 # contextProductDirectory
 
 
-  ## Assemble product path
+  # Assemble product path
 
 - name: Generate product file path
   block:
 
     - name: Generate product file path
-      set_fact: 
+      set_fact:
         productFileDirectory: "product/{{ contextProductOrganization|default(mavenoHostDomainName) }}"
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productFileDirectory: "{{ productFileDirectory }}/{{ contextComponentIdentifier }}"
       when: contextComponentIdentifier is defined
 
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productFilePathBase: "{{ productFileDirectory }}/{{ inventory_hostname }}"
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productFilePathBase: "{{ productFilePathBase }}.{{ contextComponentIdentifier }}"
       when: contextComponentIdentifier is defined
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productFilePathBase: "{{ productFilePathBase }}.product"
 
     - name: Ensure product file directory
@@ -58,7 +58,7 @@
         mode: 0700
 
 
-  ## Get data
+  # Get data
 
 - name: Product Store / GET
   when: contextProductStoreAction == 'get'
@@ -70,13 +70,13 @@
         path: "{{ productFilePathBase }}.yml"
       register: statResult
       changed_when: false
-      
+
     - name: Create empty decrypted product file if none exists
       when: not statResult.stat.exists
       delegate_to: localhost
       shell: "echo '{}' > {{ productFilePathBase }}_decrypted.yml"
       changed_when: false
-    
+
     - name: Create copy of product file as working file if it exists
       when: statResult.stat.exists
       delegate_to: localhost
@@ -102,16 +102,16 @@
   always:
     - name: Delete working file
       delegate_to: localhost
-      file: 
+      file:
         path: "{{ productFilePathBase }}_decrypted.yml"
         state: absent
       changed_when: false
 
 
-  ## Set/merge data
+  # Set/merge data
 
 - name: Product Store / {{ contextProductStoreAction|upper }}
-  when: > 
+  when: >
     contextProductStoreAction == 'set'
     or contextProductStoreAction == 'merge'
   block:
@@ -120,12 +120,13 @@
     - name: Product Store / {{ contextProductStoreAction|upper }}
       delegate_to: localhost
       stat:
-        path: "{{ productFilePathBase }}.yml"      
+        path: "{{ productFilePathBase }}.yml"
       changed_when: false
       register: statResult
 
-      # Create empty decrypted product file if none exists 
+      # Create empty decrypted product file if none exists
     - shell: "echo '{}' > {{ productFilePathBase }}_decrypted.yml"
+      # noqa unnamed-task
       when: not statResult.stat.exists
       delegate_to: localhost
       changed_when: false
@@ -135,7 +136,7 @@
       delegate_to: localhost
       shell: "umask 0007 && cp {{ productFilePathBase }}.yml {{ productFilePathBase }}_decrypted.yml"
       changed_when: false
-      
+
     - name: Decrypt copy of product file
       when: statResult.stat.exists
       no_log: true
@@ -153,13 +154,20 @@
 
     - name: "Setting data for component {{ contextComponentIdentifier }}"
       delegate_to: localhost
-      shell: "echo '{{ lookup('file', '{{ productFilePathBase }}_decrypted.yml')|from_yaml|combine(contextProductData, recursive=True)|to_nice_yaml }}' > {{ productFilePathBase }}_decrypted.yml"
+      shell: >-
+        echo '{{ lookup('file', '{{ productFilePathBase }}_decrypted.yml')
+        | from_yaml | combine(contextProductData, recursive=True) | to_nice_yaml }}'
+        > {{ productFilePathBase }}_decrypted.yml
       changed_when: false
       when: contextProductStoreAction == 'set'
 
     - name: "Merging data for component {{ contextComponentIdentifier }}"
       delegate_to: localhost
-      shell: "echo '{{ contextProductData|combine(lookup('file', '{{ productFilePathBase }}_decrypted.yml')|from_yaml, recursive=True)|to_nice_yaml }}' > {{ productFilePathBase }}_decrypted.yml"
+      shell: >-
+        echo '{{ contextProductData
+        | combine(lookup('file', '{{ productFilePathBase }}_decrypted.yml')
+        | from_yaml, recursive=True) | to_nice_yaml }}'
+        > {{ productFilePathBase }}_decrypted.yml
       changed_when: false
       when: contextProductStoreAction == 'merge'
 
@@ -179,7 +187,9 @@
       # Copy encrypted working file into product file
     - name: Copy back
       delegate_to: localhost
-      shell: "cp {{ productFilePathBase }}_decrypted.yml {{ productFilePathBase }}.yml"
+      command: >-
+        cp '{{ productFilePathBase }}_decrypted.yml'
+        '{{ productFilePathBase }}.yml'
       changed_when: false
 
   # Always delete working file
@@ -187,13 +197,13 @@
 
     - name: Delete
       delegate_to: localhost
-      file: 
+      file:
         path: "{{ productFilePathBase }}_decrypted.yml"
         state: absent
       changed_when: false
 
 
-  ## Backup directory/file
+  # Backup directory/file
 
 - name: Generate product archive name
   when: >
@@ -203,10 +213,10 @@
     - name: Create product archive name
       set_fact:
         productTarGzArchiveName: "{{ (contextProductDirectory | basename | replace('.','')) + '.product.tar.gz' }}"
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productTarGzArchiveName: "{{ contextProductLabel }}.{{ productTarGzArchiveName }}"
       when: contextProductLabel is defined
-    - set_fact:
+    - set_fact:  # noqa unnamed-task
         productTarGzArchiveName: "{{ contextComponentIdentifier }}.{{ productTarGzArchiveName }}"
       when: contextComponentIdentifier is defined
 
@@ -239,10 +249,10 @@
       fetch:
         src: "{{ mavenoManagingHomeDirectory }}/.tmp/product/{{ productTarGzArchiveName }}"
         dest: "{{ productFileDirectory }}/files/{{ productTarGzArchiveName }}"
-        flat: yes
 
-      #TODO: Fetched file still owned by root
-      #TODO: AvA
+
+      # TODO: Fetched file still owned by root
+      # TODO: AvA
     - name: Set permissions on fetched product file
       when: ansible_user != 'root'
       delegate_to: localhost
@@ -275,7 +285,7 @@
         path: "{{ mavenoManagingHomeDirectory }}/.tmp/product"
 
 
-  ## Restore directory/file
+  # Restore directory/file
 
 - name: Restore file/directory from product
   become: true
@@ -286,7 +296,7 @@
 
 - name: "Restore file/directory from product for user {{ contextSystemUser }}"
   become: true
-  when: 
+  when:
     - contextProductStoreAction == 'restore'
     - contextSystemUser is defined
   unarchive:
@@ -294,5 +304,6 @@
     dest: "{{ contextProductDirectory|dirname }}"
     owner: "{{ contextSystemUser }}"
     group: "{{ contextSystemUser }}"
+
 
 ...
