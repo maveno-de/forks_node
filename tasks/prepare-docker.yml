@@ -117,7 +117,7 @@
 
 ## rootless Docker
 
-- name: X Add Docker environment variables to context system user
+- name: Add Docker environment variables to context system user
   vars:
     contextBashRcFilePath: "{{ forksComponentHomeDirectory }}/.bashrc"
     contextNonInteractiveRules:
