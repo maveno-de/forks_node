@@ -72,7 +72,9 @@
 
 - name: Switch temporarily to system python
   set_fact: 
-    tempPythonInterpreter: "{{ ansible_python_interpreter }}"
+    tempPythonInterpreter: >-
+      {{ ansible_python_interpreter
+      | default(forksSystemPythonInterpreter) }}
 - set_fact: 
     ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
 ###
