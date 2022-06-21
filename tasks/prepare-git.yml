@@ -50,7 +50,7 @@
       - ". {{ forksComponentApplicationDirectory }}/venv/bin/activate"
   include_role:
     name: maveno_de.forks_collection.forks_utilities
-  tasks_from: generateBashRc.yml
+    tasks_from: generateBashRc.yml
 
 
 - name: "Ensure local shared directory for user {{ forksComponentSystemUsername }}"

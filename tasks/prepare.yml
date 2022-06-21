@@ -38,7 +38,7 @@
   lineinfile:
     path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
     line: "{{ forksCommandLineItem }}"
-    insertbefore: BOF
+    insertafter: '^#NON-INTERACTIVE$'
   loop:
     - alias show_temp='watch -n 1 sudo vcgencmd measure_temp'
     - alias show_clock='watch -n 1 sudo vcgencmd measure_clock arm'

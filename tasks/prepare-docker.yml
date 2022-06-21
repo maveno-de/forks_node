@@ -68,7 +68,9 @@
     contextSystemUsername: "{{ forksComponentSystemUsername }}"
     contextHomeDirectory: "{{ forksComponentHomeDirectory }}"
     contextRemoveExistingFile: yes
-  include_tasks: generateBashRc.yml
+  include_role:
+    name: maveno_de.forks_collection.forks_utilities
+    tasks_from: generateBashRc.yml
 
 - name: Ensure .ssh directory for {{ forksComponentIdentifier|capitalize }} system user"
   become: true
@@ -115,13 +117,15 @@
 
 ## rootless Docker
 
-- name: Add Docker environment variables to context system user
+- name: X Add Docker environment variables to context system user
   vars:
     contextBashRcFilePath: "{{ forksComponentHomeDirectory }}/.bashrc"
     contextNonInteractiveRules:
       - export XDG_RUNTIME_DIR=/run/user/$(id -u)
       - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
-  include_tasks: addNonInteractiveRulesToBashRc.yml
+  include_role:
+    name: maveno_de.forks_collection.forks_utilities
+    tasks_from: addNonInteractiveRulesToBashRc.yml
 
 - name: "Get services for user {{ forksComponentSystemUsername }}"
   become: true

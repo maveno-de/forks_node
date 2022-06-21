@@ -2,6 +2,8 @@ galaxy_info:
   author: Javanaut
   description: Chia Fork Node Distribution and Management
   company: Maveno
+  role_name: forks_node
+  namespace: maveno_de
 
   # If the issue tracker for your role is not on github, uncomment the
   # next line and provide a value
