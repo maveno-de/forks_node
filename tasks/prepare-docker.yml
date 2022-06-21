@@ -2,39 +2,40 @@
 
 
   #RESULT: forkUserIdShellResult.stdout
-- name: "Get uid of {{ forkIdentifier|capitalize }} system user"
-  become: yes
-  shell: "id -u {{ forkSystemUsername }} | cat"
+- name: "Get uid of {{ forksComponentIdentifier|capitalize }} system user"
+  become: true
+  shell: "id -u {{ forksComponentSystemUsername }} | cat"
   changed_when: false
   register: forkUserIdShellResult
   tags: certificates
 
-- name: "Create {{ forkIdentifier|capitalize }} system user"
+- name: "Create {{ forksComponentIdentifier|capitalize }} system user"
   when: forkUserIdShellResult.stdout == ''
-  become: yes
+  become: true
   user:
-    name: "{{ forkSystemUsername }}"
-    home: "{{ forkHomeDirectory }}"
-    comment: "{{ forkIdentifier|capitalize }}"
+    name: "{{ forksComponentSystemUsername }}"
+    home: "{{ forksComponentHomeDirectory }}"
+    comment: "{{ forksComponentIdentifier|capitalize }}"
     shell: /bin/bash
+    umask: '0027'
 
      # Due to ansible warning
 - name: Ensure remote temp dir for ansible
-  become: yes
+  become: true
   file:
-    path: "{{ forkHomeDirectory }}/.ansible/tmp"
+    path: "{{ forksComponentHomeDirectory }}/.ansible/tmp"
     state: directory
-    owner: "{{ forkSystemUsername }}"
-    group: "{{ forkSystemUsername }}"
+    owner: "{{ forksComponentSystemUsername }}"
+    group: "{{ forksComponentSystemUsername }}"
     mode: 0700
 
-- name: "Set permissions on {{ forkIdentifier|capitalize }} home directory"
-  become: yes
+- name: "Set permissions on {{ forksComponentIdentifier|capitalize }} home directory"
+  become: true
   file:
-    path: "{{ forkHomeDirectory }}"
+    path: "{{ forksComponentHomeDirectory }}"
     state: directory
-    owner: "{{ forkSystemUsername }}"
-    group: "{{ forkSystemUsername }}"
+    owner: "{{ forksComponentSystemUsername }}"
+    group: "{{ forksComponentSystemUsername }}"
     mode: o=
 
 
@@ -42,50 +43,60 @@
   # when running on existing rootless docker in the corresponding user
   #HINT: Stopping all running containers to prevent timeouts
   # when building due to cpu time consumption
-- name: "Remove rootless docker service for user {{ forkSystemUsername }}"
-  #when: forkUserIdShellResult.stdout != ''
-  include_tasks: remove-rootless.yml
+#- name: "Remove rootless docker service for user {{ forksComponentSystemUsername }}"
+#  #when: forkUserIdShellResult.stdout != ''
+#  include_tasks: remove-rootless.yml
 
-- name: Prepare rootless docker service
-  when: not forkRootlessDockerIsPrepared is defined
-  include_tasks: "prepare-rootless-{{ mavenoForksDockerInstallationOption }}.yml"
-  
-- name: Set docker rootless prepared status
-  set_fact:
-    forkRootlessDockerIsPrepared: yes
+#- name: Prepare rootless docker service
+#  when: not forkRootlessDockerIsPrepared is defined
+#  include_tasks: "prepare-rootless-{{ forksDockerInstallationOption }}.yml"
+#  
+#- name: Set docker rootless prepared status
+#  set_fact:
+#    forkRootlessDockerIsPrepared: yes
 
-
-- name: "Generate .bashrc for {{ forkIdentifier|capitalize }} system user"
+- name: "Setup rootless Docker service for user {{ forksComponentSystemUsername }}"
   vars:
-    contextSystemUsername: "{{ forkSystemUsername }}"
-    contextHomeDirectory: "{{ forkHomeDirectory }}"
+    forksDockerSystemUsername: "{{ forksComponentSystemUsername }}"
+    forksDockerHomeDirectory: "{{ forksComponentHomeDirectory }}"
+  include_role:
+    name: maveno_de.forks_collection.rootless_docker
+
+
+- name: "Generate .bashrc for {{ forksComponentIdentifier|capitalize }} system user"
+  vars:
+    contextSystemUsername: "{{ forksComponentSystemUsername }}"
+    contextHomeDirectory: "{{ forksComponentHomeDirectory }}"
     contextRemoveExistingFile: yes
   include_tasks: generateBashRc.yml
 
-- name: Ensure .ssh directory for {{ forkIdentifier|capitalize }} system user"
-  become: yes
+- name: Ensure .ssh directory for {{ forksComponentIdentifier|capitalize }} system user"
+  become: true
   file:
-    path: "{{ forkHomeDirectory }}/.ssh"
+    path: "{{ forksComponentHomeDirectory }}/.ssh"
     state: directory
-    owner: "{{ forkSystemUsername }}"
-    group: "{{ forkSystemUsername }}"
+    owner: "{{ forksComponentSystemUsername }}"
+    group: "{{ forksComponentSystemUsername }}"
     mode: 0700
 
-- name: "Adding SSH public keys to user {{ forkSystemUsername }}"
-  become: yes
+- name: "Adding SSH public keys to user {{ forksComponentSystemUsername }}"
+  when:
+    - forksPublicSshKeys is defined
+    - forksPublicSshKeys|length > 0
+  become: true
   authorized_key:
-    user: "{{ forkSystemUsername }}"
-    key: "{{ mavenoPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
+    user: "{{ forksComponentSystemUsername }}"
+    key: "{{ forksPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
     exclusive: true
 
 
-- name: "Ensure {{ forkIdentifier|capitalize }} local directories"
-  become: yes
+- name: "Ensure {{ forksComponentIdentifier|capitalize }} local directories"
+  become: true
   file:
-    path: "{{ forkHomeDirectory }}/.local/{{ forkLocalDirectoryItem }}"
+    path: "{{ forksComponentHomeDirectory }}/.local/{{ forkLocalDirectoryItem }}"
     state: directory
-    owner: "{{ forkSystemUsername }}"
-    group: "{{ forkSystemUsername }}"
+    owner: "{{ forksComponentSystemUsername }}"
+    group: "{{ forksComponentSystemUsername }}"
     mode: 0750
   loop:
     - share
@@ -94,9 +105,9 @@
     loop_var: forkLocalDirectoryItem
 
   #RESULT: forkUserIdShellResult.stdout
-- name: "Get uid of {{ forkIdentifier|capitalize }} system user"
-  become: yes
-  shell: "id -u {{ forkSystemUsername }}"
+- name: "Get uid of {{ forksComponentIdentifier|capitalize }} system user"
+  become: true
+  shell: "id -u {{ forksComponentSystemUsername }}"
   changed_when: false
   register: forkUserIdShellResult
   tags: certificates
@@ -106,15 +117,15 @@
 
 - name: Add Docker environment variables to context system user
   vars:
-    contextBashRcFilePath: "{{ forkHomeDirectory }}/.bashrc"
+    contextBashRcFilePath: "{{ forksComponentHomeDirectory }}/.bashrc"
     contextNonInteractiveRules:
       - export XDG_RUNTIME_DIR=/run/user/$(id -u)
       - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
   include_tasks: addNonInteractiveRulesToBashRc.yml
 
-- name: "Get services for user {{ forkSystemUsername }}"
-  become: yes
-  become_user: "{{ forkSystemUsername }}"
+- name: "Get services for user {{ forksComponentSystemUsername }}"
+  become: true
+  become_user: "{{ forksComponentSystemUsername }}"
   shell: systemctl --user status docker.service
   args:
     executable: /bin/bash
@@ -125,44 +136,19 @@
   changed_when: false
   failed_when: false
 
-- name: "Set docker service status for user {{ forkSystemUsername }}"
+- name: "Set docker service status for user {{ forksComponentSystemUsername }}"
   set_fact:
     forkDockerServiceIsRunning: "{{ (forkDockerServiceStatusResult.rc == 0 and 'loaded' in forkDockerServiceStatusResult.stdout_lines.1 and 'active' in forkDockerServiceStatusResult.stdout_lines.2)|bool }}"
 
-- name: "Install rootless docker for {{ forkIdentifier|capitalize }}"
+
+- name: "Install rootless docker for {{ forksComponentIdentifier|capitalize }}"
   when: not forkDockerServiceIsRunning
   include_tasks: install-rootless.yml
 
 
-
-- name: "Create null profile file for {{ forkIdentifier|capitalize }} rootless Docker"
-  become: yes
-  copy:
-    content: '{}'
-    dest: "{{ forkHomeDirectory }}/.config/docker/profile.json"
-    owner: "{{ forkSystemUsername }}"
-    group: "{{ forkSystemUsername }}"
-    mode: 0644
-    force: yes
-
-  # NOTE: Debian changed from cgroupsv1 to cgroupsv2 in bulleye
-  # preventing docker OCI service to start. Corresponding parameter below
-  # can eventually be removed.
-- name: "Modify {{ forkIdentifier|capitalize }} rootless Docker service file"
-  become: yes
-  replace:
-    path: "{{ forkHomeDirectory }}/.config/systemd/user/docker.service"
-    regexp: '^ExecStart=.*$'
-    replace: >
-      ExecStart=/usr/bin/dockerd-rootless.sh
-      --seccomp-profile
-      {{ forkHomeDirectory }}/.config/docker/profile.json
-      {% if ansible_distribution == 'Debian' and ansible_distribution_major_version|int >= 11 %} --exec-opt native.cgroupdriver=cgroupfs{% endif %}
- 
-
-- name: Restart {{ forkIdentifier|capitalize }} rootless Docker service
-  become: yes
-  become_user: "{{ forkSystemUsername }}"
+- name: Restart {{ forksComponentIdentifier|capitalize }} rootless Docker service
+  become: true
+  become_user: "{{ forksComponentSystemUsername }}"
   systemd: 
     name: docker.service
     daemon_reload: yes
@@ -176,15 +162,15 @@
 
 ## Backup
 
-- name: "Ensure {{ forkIdentifier|capitalize }} container backup data directory"
+- name: "Ensure {{ forksComponentIdentifier|capitalize }} container backup data directory"
   when: 
-    - mavenoForksBackupDataDirectory is defined
-  become: yes
+    - forksBackupDataDirectory is defined
+  become: true
   file:
-    path: "{{ mavenoForksBackupDataDirectory }}/{{ forkIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+    path: "{{ forksBackupDataDirectory }}/{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
     state: directory
-    owner: "{{ mavenoManagingSystemUsername }}"
-    group: "{{ mavenoManagingSystemUsername }}"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
     mode: 0700
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
@@ -197,14 +183,14 @@
 - name: Generate wallet kicker script template
   when:
     - not forkWalletKickerScriptDockerCreated is defined 
-    - "'wallet' in forkRequirementsInstanceItem.startOption"
-  become: yes
+    - "'wallet' in forksComponentComponentType"
+  become: true
   template:
     src: wallet-kicker-docker.sh.j2
-    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/wallet-kicker-docker.sh"
+    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/wallet-kicker-docker.sh"
     force: yes
-    owner: "{{ mavenoManagingSystemUsername }}"
-    group: "{{ mavenoManagingSystemUsername }}"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
     mode: 0755
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
@@ -213,7 +199,7 @@
 
 - set_fact:
     forkWalletKickerScriptDockerCreated: yes
-  when: "'wallet' in forkRequirementsInstanceItem.startOption"
+  when: "'wallet' in forksComponentComponentType"
   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
   loop_control:
     loop_var: forkRequirementsInstanceItem

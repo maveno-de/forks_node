@@ -1,6 +1,7 @@
 ---
 
-mavenoForksDockerInstallationOption: deb # apt|dep
-mavenoForksDefaultBranch: main
+
+forksDefaultBranch: main
+
 
 ...

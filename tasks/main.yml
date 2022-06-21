@@ -7,30 +7,66 @@
     - utilities
     - services
 
+
+
   #HINT: Referencing vars in vars here
 - name: Build Chia forks
   vars:
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
-    forkIdentifier: "{{ forkItem }}"
-    forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
-    forkSystemUsername: "{{ forkBuildRequirementsDescriptor.systemUsername|default(forkIdentifier) }}"
-    forkHomeDirectory: "{{ forkBuildRequirementsDescriptor.homeDirectory|default(mavenoVariableDirectory+'/'+forkSystemUsername) }}"
-    forkConfigurationDirectory: "{{ forkHomeDirectory }}/{{ forkBuildRequirementsDescriptor.configurationDirectoryName|default('.'+forkIdentifier) }}"
-    forkBinaryDirectory: "{{ forkHomeDirectory }}/.local/bin"
-    forkSharedDirectory: "{{ forkHomeDirectory }}/.local/share"
-    forkApplicationDirectoryName: "{{ forkBuildRequirementsDescriptor.repositoryIdentifier | regex_search('[^/]+$') }}"
-    forkApplicationDirectory: "{{ forkHomeDirectory }}/.local/share/{{ forkApplicationDirectoryName }}"
-    forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
-    forkExecutableName: "{{ forkBuildRequirementsDescriptor.executableName|default(forkIdentifier) }}"
-    forkPermissionsFix: "{{ (forkBuildRequirementsDescriptor.permissionsFix|default(false))|bool }}"
+    forksComponentIdentifier: >-
+      {{ forksComponentItem.identifier }}
+    forksComponentForkIdentifier: >-
+      {{ forksComponentItem.fork }}
+    forksComponentComponentType: >-
+      {{ ('component' in forksComponentItem)
+      | ternary(forksComponentItem.component, 'node') }}
+    forksComponentBuildOption: >-
+      {{ ('build' in forksComponentItem)
+      | ternary(forksComponentItem.build, 'git') }}
+    forksComponentEnabled: >-
+      {{ ('enabled' in forksComponentItem)
+      | ternary(forksComponentItem.enabled, true) }}
+    forksComponentSystemUsername: >-
+      {{ ('username' in forksComponentItem)
+      | ternary(forksComponentItem.username, forksComponentIdentifier) }}
+    forksComponentHomeDirectory: >-
+      {{ ('home' in forksComponentItem)
+      | ternary(forksComponentItem.home,
+      forksUserRootDirectory + '/' + forksComponentSystemUsername) }}
+    forksConfigurationDirectory: >-
+      {{ forksComponentHomeDirectory }}/{{ ('config' in forksComponentItem)
+      | ternary(forksComponentItem.config, '.'+forksComponentIdentifier) }}
+    forksBinaryDirectory: "{{ forksComponentHomeDirectory }}/.local/bin"
+    forksSharedDirectory: "{{ forksComponentHomeDirectory }}/.local/share"
+    forksComponentRepositoryIdentifier: >-
+      {{ forksRepositoryIdentifierLookupTable[forksComponentIdentifier] }}
+    forksComponentBranch: >-
+      {{ ('branch' in forksComponentItem)
+      | ternary(forksComponentItem.branch, forksDefaultBranch) }}
+    forksComponentApplicationDirectoryName: >-
+      {{ forksComponentRepositoryIdentifier
+      | regex_search('[^/]+$') }}
+    forksComponentApplicationDirectory: >-
+      {{ forksComponentHomeDirectory }}/.local/share/{{ forksComponentApplicationDirectoryName }}
+    forksServiceName: >-
+      {{ ('service' in forksComponentItem)
+      | ternary(forksComponentItem.service, forksComponentIdentifier) }}
+    forksComponentExecutableName: >-
+      {{ ('executable' in forksComponentItem)
+      | ternary(forksComponentItem.executable, forksComponentIdentifier) }}
+    forksComponentPermissionsFix: >-
+      {{ ('permissions' in forksComponentItem)
+      | ternary(forksComponentItem.permissions, 'false') }}
   include_tasks: buildFork.yml
   tags:
     - utilities
     - services
     - certificates
-  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop: >-
+    {{ (forksComponentsConfigurationDescriptor
+    | selectattr('host', 'equalto', inventory_hostname) }}
   loop_control:
-    loop_var: forkItem
+    loop_var: forksComponentItem
+
 
 - name: Configure Chia forks installation
   include_tasks: configure.yml
@@ -41,25 +77,31 @@
 
   #HINT: Starting Chia fork services the latest possible to prevent timeouts
   # when building due to cpu time consumption
-- name: Start Fork service
-  when: forkBuildRequirementsDescriptor.buildOption == 'git'
+- name: Start Forks services
   vars:
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkItem] }}"
-    forkIdentifier: "{{ forkItem }}"
-    forkServiceName: "{{ forkBuildRequirementsDescriptor.serviceName|default(forkIdentifier) }}"
-    forkEnabled: "{{ forkBuildRequirementsDescriptor.enabled|default(true) }}"
-  become: yes
+    baremetalComponents: >-
+     {{ forksComponentsConfigurationDescriptor
+     | selectattr('build', 'undefined')
+     + forksComponentsConfigurationDescriptor
+     | selectattr('build', 'defined')
+     | selectattr('build', 'equalto', 'git') }}
+    forksServiceName: >-
+      {{ ('service' in baremetalComponentsItem)
+      | ternary(baremetalComponentsItem.service, baremetalComponentsItem.identifier) }}
+    forksComponentEnabled: >-
+      {{ ('enabled' in baremetalComponentsItem)
+      | ternary(baremetalComponentsItem.enabled, true) }}
+  become: true
   systemd:
-    name: "{{ forkServiceName }}.service"
+    name: "{{ forksServiceName }}.service"
     daemon-reload: yes
-    enabled: "{{ forkEnabled }}"
-    state: "{{ forkEnabled|ternary('restarted', 'stopped') }}"
+    enabled: "{{ forksComponentEnabled }}"
+    state: "{{ forksComponentEnabled|ternary('restarted', 'stopped') }}"
   changed_when: false
   failed_when: false
-  ignore_errors: yes
-  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop: "{{ baremetalComponents }}"
   loop_control:
-    loop_var: forkItem
+    loop_var: baremetalComponentsItem
   tags: certificates
 
 

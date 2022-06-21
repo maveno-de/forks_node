@@ -1,11 +1,11 @@
 #!/bin/bash
 
-USER_NAME='{{ forkSystemUsername }}'
-SERVICE_NAME='{{ forkServiceName }}'
-EXECUTABLE_NAME='{{ forkExecutableName }}'
-HOME_DIR="{{ forkHomeDirectory }}"
-APP_DIR="{{ forkApplicationDirectory }}"
-CONFIG_DIR_NAME="{{ forkConfigurationDirectory|basename }}"
+USER_NAME='{{ forksComponentSystemUsername }}'
+SERVICE_NAME='{{ forksServiceName }}'
+EXECUTABLE_NAME='{{ forksComponentExecutableName }}'
+HOME_DIR="{{ forksComponentHomeDirectory }}"
+APP_DIR="{{ forksComponentApplicationDirectory }}"
+CONFIG_DIR_NAME="{{ forksConfigurationDirectory|basename }}"
 GITHUB_REPO_IDENTIFIER='{{ forkBuildRequirementsDescriptor.repositoryIdentifier }}'
 GITHUB_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO_IDENTIFIER}/releases/latest"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO_IDENTIFIER}.git"
@@ -24,7 +24,7 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         systemctl stop "${SERVICE_NAME}"
         usermod -aG sudo "${USER_NAME}"
         rm -rf "${APP_DIR}"
-        su - "${USER_NAME}" -c "git clone -b {{ forkBuildRequirementsDescriptor.branch|default(mavenoForksDefaultBranch) }} ${GITHUB_REPO_URL} ${APP_DIR}"
+        su - "${USER_NAME}" -c "git clone -b {{ forkBuildRequirementsDescriptor.branch|default(forksDefaultBranch) }} ${GITHUB_REPO_URL} ${APP_DIR}"
         chmod 'ug+x' "${APP_DIR}/install.sh"
         su - "${USER_NAME}" -c "cd ${APP_DIR} && ./install.sh"
         deluser "${USER_NAME}" 'sudo'

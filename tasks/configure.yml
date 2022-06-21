@@ -2,27 +2,25 @@
 
   
 - name: Assign Chia fork instance group to managing user
-  become: yes
-  vars:
-    forkIdentifier: "{{ forkItem }}"
-    forkBuildRequirementsDescriptor: "{{ mavenoForksBuildRequirementsDescriptor[forkIdentifier] }}"
-    forkSystemUsername: "{{ forkBuildRequirementsDescriptor.systemUsername|default(forkIdentifier) }}"
+  become: true
   user:
-    name: "{{ mavenoManagingSystemUsername }}"
+    name: "{{ forksManagingSystemUsername|default('root') }}"
     groups: 
-      - "{{ forkSystemUsername }}"
+      - "{{ forkSystemUsernameItem }}"
     append: yes
-  loop: "{{ mavenoForksBuildRequirementsDescriptor|list }}"
+  loop: >-
+    {{ (forksComponentsConfigurationDescriptor|selectattr('username', 'defined')|map(attribute='username')
+    + forksComponentsConfigurationDescriptor|selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
   loop_control:
-    loop_var: forkItem
+    loop_var: forkSystemUsernameItem
 
 
 ## Qwinns Forktools
 
-- name: Setup Qwinns Forktools
-  when: mavenoForksInstallForktools is defined
-  include_tasks: installForktools.yml
-  tags: utilities
+#- name: Setup Qwinns Forktools
+#  when: forksInstallForktools is defined
+#  include_tasks: installForktools.yml
+#  tags: utilities
 
 
 ...

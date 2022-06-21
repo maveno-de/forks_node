@@ -1,22 +1,22 @@
 ---
 
 
-mavenoForksArchitectureLookupTable:
+forksArchitectureLookupTable:
   arm64: arm64
   armhf: arm64
   amd64: amd64
 
-mavenoForksPlatformLookupTable:
+forksPlatformLookupTable:
   arm64: linux/arm64/v8
   armhf: linux/arm64/v8
   amd64: linux/amd64
 
-mavenoForksLogAnalyzerArchitectureLookupTable:
+forksLogAnalyzerArchitectureLookupTable:
   amd64: amd64
   armhf: arm
   arm64: arm
 
-mavenoForksStartOptionLookupTable:
+forksStartOptionLookupTable:
   fullnode+wallet: wallet
   fullnode+farmer: farmer-no-wallet
   farmer: farmer-only
@@ -24,15 +24,12 @@ mavenoForksStartOptionLookupTable:
   harvester: harvester
   fullnode: node
 
-slirp4NetNsArchitectureLookupTable:
-  amd64: x86_64
-  armhf: armv7l
-  arm64: aarch64
 
-fuseOverlayFsArchitectureLookupTable:
-  amd64: x86_64
-  armhf: armv7l
-  arm64: aarch64
+forksRepositoryIdentifierLookupTable:
+  chia: Chia-Network/chia-blockchain
+  chives: HiveProject2021/chives-blockchain
+  silicoin: zcomputerwiz/silicoin-blockchain
+  ecostake: Ecostake-Network/ecostake-blockchain
 
 
 ...

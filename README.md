@@ -33,28 +33,28 @@ forks:
 
   vars:
 
-    mavenoVendorIdentifier: <Vendor>
-    mavenoForksComponentIdentifier: forks
+    forksVendorIdentifier: <Vendor>
+    forksComponentIdentifier: forks
 
-    mavenoSystemCaCertificatesFilePath: /etc/ssl/certs/ca-certificates.crt
+    forksSystemCaCertificatesFilePath: /etc/ssl/certs/ca-certificates.crt
 
-    mavenoManagingLocalBinaryDirectory: "{{ mavenoManagingHomeDirectory }}/.local/bin"
+    forksManagingLocalBinaryDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin"
 
-    mavenoPrefixDirectory: "/usr/local/{{ mavenoVendorIdentifier }}"
+    mavenoPrefixDirectory: "/usr/local/{{ forksVendorIdentifier }}"
     mavenoSourceDirectory: "{{ mavenoPrefixDirectory }}/src"
-    mavenoLibraryDirectory: "{{ mavenoPrefixDirectory }}/lib"
+    forksLibraryDirectory: "{{ mavenoPrefixDirectory }}/lib"
     mavenoLibrary64Directory: "{{ mavenoPrefixDirectory }}/lib64"
     mavenoBinaryDirectory: "{{ mavenoPrefixDirectory }}/bin"
     mavenoLibexecDirectory: "{{ mavenoPrefixDirectory }}/libexec"
     mavenoSharedDirectory: "{{ mavenoPrefixDirectory }}/share"
-    mavenoSystemServiceDirectory: /etc/systemd/system
+    forksSystemServiceDirectory: /etc/systemd/system
 
-    mavenoVariableDirectory: /var/local/{{ mavenoVendorIdentifier }}/lib
+    forksVariableDirectory: /var/local/{{ forksVendorIdentifier }}/lib
 
-    mavenoSystemPythonInterpreter: /usr/bin/python3
-    mavenoVenvInterpreter: /usr/local/{{ mavenoVendorIdentifier }}/share/{{ mavenoVendorIdentifier }}.venv/bin/python
+    forksSystemPythonInterpreter: /usr/bin/python3
+    forksVenvInterpreter /usr/local/{{ forksVendorIdentifier }}/share/{{ forksVendorIdentifier }}.venv/bin/python
 
-    mavenoPublicSshKeys:
+    forksPublicSshKeys:
       - name: 'SSH public key 1'
         sshkey: 'ssh-rsa <...> SSH public key 1'
       - name: 'SSH public key 2'
@@ -66,19 +66,19 @@ forks:
     #NOTE: Farmer nodes must be defined before harvester nodes
     <Hostname node1>:
 
-      mavenoManagingSystemUsername: <Managing account username>
-      mavenoManagingHomeDirectory: <Managing account home directory>
+      forksManagingSystemUsername|default('root'): <Managing account username>
+      forksManagingHomeDirectory|default('/root'): <Managing account home directory>
 
-      mavenoSystemArchitecture: arm64 # amd64|arm64
-      mavenoHostDomainName: <Node1 domain name>
-      mavenoJobTimeFactor: 4
+      forksSystemArchitecture: arm64 # amd64|arm64
+      ansible_host: <Node1 domain name>
+      forksJobTimeFactor: 4
 
-      mavenoForksBackupDataDirectory: <Blockchains local backup directory>
-      mavenoForksBackupHour: 8
-      mavenoForksBackupMinute: 0
-      mavenoForksBackupWeekday: 0 # Sunday=0, Monday=1, ...
+      forksBackupDataDirectory: <Blockchains local backup directory>
+      forksBackupHour: 8
+      forksBackupMinute: 0
+      forksBackupWeekday: 0 # Sunday=0, Monday=1, ...
 
-      mavenoForksBuildRequirementsDescriptor:
+      forksBuildRequirementsDescriptor:
 
         chia:
           buildOption: git
@@ -108,7 +108,7 @@ forks:
           repositoryIdentifier: SkynetNetwork/skynet-blockchain
           nodePort: 9999
           #farmerPort: 9998
-          buildEnvVars:
+          env:
             BUILD_VDF_CLIENT: 'N' 
             BUILD_VDF_BENCH: 'N'
           aptPackages:
@@ -151,14 +151,14 @@ forks:
 
     <Hostname node2>:
 
-      mavenoManagingSystemUsername: <Node2 managing account username>
-      mavenoManagingHomeDirectory: <Node2 managing account home directory>
+      forksManagingSystemUsername|default('root'): <Node2 managing account username>
+      forksManagingHomeDirectory|default('/root'): <Node2 managing account home directory>
 
-      mavenoSystemArchitecture: arm64 # amd64|arm64
-      mavenoHostDomainName: <Node2 domain name>
-      mavenoJobTimeFactor: 4
+      forksSystemArchitecture: arm64 # amd64|arm64
+      ansible_host: <Node2 domain name>
+      forksJobTimeFactor: 4
 
-      mavenoForksBuildRequirementsDescriptor:
+      forksBuildRequirementsDescriptor:
 
         chia:
           buildOption: docker
@@ -194,13 +194,13 @@ forks:
 
     <Hostname node3>:
 
-      mavenoManagingSystemUsername: <Node3 managing account username>
-      mavenoManagingHomeDirectory: <Node3 managing account home directory>
+      forksManagingSystemUsername|default('root'): <Node3 managing account username>
+      forksManagingHomeDirectory|default('/root'): <Node3 managing account home directory>
 
-      mavenoSystemArchitecture: amd64
-      mavenoJobTimeFactor: 1
+      forksSystemArchitecture: amd64
+      forksJobTimeFactor: 1
 
-      mavenoForksBuildRequirementsDescriptor:
+      forksBuildRequirementsDescriptor:
 
         chia:
           buildOption: docker
@@ -260,13 +260,13 @@ This is a basic playbook for the application of the role.
 
 - name: Build Chia Forks
   hosts: forks
-  remote_user: "{{ mavenoManagingSystemUsername }}"
+  remote_user: "{{ forksManagingSystemUsername|default('root') }}"
   gather_facts: yes
   tasks:
 
     - name: Switch to Python virtual environment of framework service
       set_fact:
-        ansible_python_interpreter: "{{ mavenoVenvInterpreter }}"
+        ansible_python_interpreter: "{{ forksVenvInterpreter }}"
       tags:
         - utilities
         - services
@@ -331,9 +331,9 @@ CA certs of fullnodes are deployed to every harvesters followed by the creation 
 
 ## Configuration
 
-Configuration is done by the mavenoForksBuildRequirementsDescriptor variable on a per host basis. This variable can be placed on the inventory file as well as in any group, host or else configuration file following the [ansible framework directory schema](https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#ansible-variable-precedence).
+Configuration is done by the forksBuildRequirementsDescriptor variable on a per host basis. This variable can be placed on the inventory file as well as in any group, host or else configuration file following the [ansible framework directory schema](https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#ansible-variable-precedence).
 
-mavenoForksBuildRequirementsDescriptor needs to contain a hash which keys are used as fork identifier, eg: chia, flax, etc. Entries on this hash determine which forks are to be installed on the corresponding host. Fork entries itself are hashes that define which instances or the corresponding fork are to be installed. Keys used in fork entries are explained in the following.
+forksBuildRequirementsDescriptor needs to contain a hash which keys are used as fork identifier, eg: chia, flax, etc. Entries on this hash determine which forks are to be installed on the corresponding host. Fork entries itself are hashes that define which instances or the corresponding fork are to be installed. Keys used in fork entries are explained in the following.
 
 ### Mandatory parameters
 
@@ -432,7 +432,7 @@ Default: .\<Fork identifier\>
 
 Some forks use different names for config directory and directory prefix, e.g. silicoin-blockchain and .sit for the config directory.
 
-#### buildEnvVars (affects only git type deployments)
+#### env (affects only git type deployments)
 
 Type: List of strings
 Value: Additional environment variables passed to the build process
@@ -468,7 +468,7 @@ flax-wallet1 wallet show
 flax-wallet2 wallet show
 
 #in general:
-<forkIdentifier or alias>-<instance name> <command parameters> ...
+<forksComponentIdentifier or alias>-<instance name> <command parameters> ...
 ...
 ```
 #### lightFullNode
@@ -521,7 +521,7 @@ A password of 48 random characters of this set are equal to about the security l
 
 Complying to this requirement the created vault files may be stored in lesser secure places or even publicly, e.g. github repository, without worrying about the contained mnemonics to be compromised.
 
-Store the vault password in a .yml file in a file in a subdirectory of this with path: files/credentials/\<Vendor\>.yml. \<Vendor\> needs to match the string stored in configuration variable mavenoVendorIdentifier. The data contained in the file needs to include this structure:
+Store the vault password in a .yml file in a file in a subdirectory of this with path: files/credentials/\<Vendor\>.yml. \<Vendor\> needs to match the string stored in configuration variable forksVendorIdentifier. The data contained in the file needs to include this structure:
 
 ```yaml
 vault:

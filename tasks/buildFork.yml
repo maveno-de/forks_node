@@ -1,22 +1,22 @@
 ---
 
 
-- name: "Prepare {{ forkIdentifier|capitalize }} installation"
-  include_tasks: "prepare-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+- name: "Prepare {{ forksComponentIdentifier|capitalize }} installation"
+  include_tasks: "prepare-{{ forksComponentBuildOption }}.yml"
   tags:
     - utilities
     - services
     - certificates
 
-- name: "Install {{ forkIdentifier|capitalize }}"
-  include_tasks: "install-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+- name: "Install {{ forksComponentIdentifier|capitalize }}"
+  include_tasks: "install-{{ forksComponentBuildOption }}.yml"
   tags:
     - utilities
     - services
     - certificates
 
-- name: "Configure {{ forkIdentifier|capitalize }}"
-  include_tasks: "configure-{{ forkBuildRequirementsDescriptor.buildOption }}.yml"
+- name: "Configure {{ forksComponentIdentifier|capitalize }}"
+  include_tasks: "configure-{{ forksComponentBuildOption }}.yml"
   tags:
     - utilities
     - services

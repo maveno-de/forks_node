@@ -2,22 +2,22 @@
 
   # Latest version result: chiaLoganalyzerSourceGithubResult.recommended_version
 - name: Determine Chia Loganalyzer latest release version
-  maveno_source_github:
+  maveno_de.forks_collection.source_github:
     owner: kubec
     repo: chia-log-analyzer
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
-    REQUESTS_CA_BUNDLE: "{{ mavenoSystemCaCertificatesFilePath }}"
+    REQUESTS_CA_BUNDLE: "{{ forksSystemCaCertificatesFilePath }}"
   register: chiaLoganalyzerSourceGithubResult
   tags: utilities
 
 - name: Download Chia Loganalyzer executable
-  become: yes
+  become: true
   get_url:
-    url: "https://github.com/kubec/chia-log-analyzer/releases/download/{{ chiaLoganalyzerSourceGithubResult.recommended_version }}/chia-log-analyzer.go-linux-{{ mavenoForksLogAnalyzerArchitectureLookupTable[mavenoSystemArchitecture] }}"
-    dest: "{{ mavenoManagingHomeDirectory }}/.local/bin/chia-log-analyzer"
-    owner: "{{ mavenoManagingSystemUsername }}"
-    group: "{{ mavenoManagingSystemUsername }}"
+    url: "https://github.com/kubec/chia-log-analyzer/releases/download/{{ chiaLoganalyzerSourceGithubResult.recommended_version }}/chia-log-analyzer.go-linux-{{ forksLogAnalyzerArchitectureLookupTable[forksSystemArchitecture] }}"
+    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/chia-log-analyzer"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
     mode: 0755
   environment:
     SSL_CERT_DIR: /etc/ssl/certs
