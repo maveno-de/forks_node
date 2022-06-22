@@ -55,7 +55,7 @@
   become_user: "{{ forksNodeSystemUsername }}"
   git:
     repo: https://github.com/maveno-de/forks-docker.git
-    #version: "{{ forksComponentIdentifier }}-{{ forksArchitectureLookupTable[forksSystemArchitecture] }}"
+    version: main
     dest: "{{ forksNodeSharedDirectory }}/forks-docker"
     force: true
     umask: '0027'
@@ -68,12 +68,14 @@
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   community.docker.docker_image:
-    name: "{{ forksNodeForkIdentifier }}"
+    name: "forks-{{ forksNodeForkIdentifier }}"
+    state: present
     build:
-      nocache: yes
+      nocache: true
       path: "{{ forksNodeSharedDirectory }}/forks-docker/src/{{ forksNodeForkIdentifier }}-docker"
       platform: "{{ forksPlatformLookupTable[forksSystemArchitecture] }}"
     source: build
+    force_source: true
     docker_host: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
@@ -97,14 +99,16 @@
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   community.docker.docker_image:
-    name: "{{ forksNodeForkIdentifier }}"
+    name: "forks-{{ forksNodeForkIdentifier }}"
+    state: present
     build:
-      nocache: yes
+      nocache: true
       path: "{{ forksNodeSharedDirectory }}/forks-docker/src/{{ forksNodeForkIdentifier }}-docker"
       platform: "{{ forksPlatformLookupTable[forksSystemArchitecture] }}"
       args:
         BRANCH: "{{ forksNodeDefaultBranch }}"
     source: build
+    force_source: true
     docker_host: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
