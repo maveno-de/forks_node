@@ -1,134 +1,127 @@
 ---
 
 
-  ## Fullnode/Wallet container
-
   #TODO: [WARNING]: Docker warning: The requested image's platform (linux/arm64/v8) does not match the detected host platform (linux/arm/v7) and no specific platform was requested
-- name: "Start {{ forksComponentIdentifier|capitalize }} fullnode+wallet container"
-  when: forksComponentService == 'fullnode+wallet'
+- name: "Start {{ forksComponentIdentifier|capitalize }} container"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   community.docker.docker_container:
-    name: "{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
-    image: "{{ forksComponentIdentifier }}:latest"
-    hostname: "{{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }}"
+    name: "{{ forksComponentIdentifier }}"
+    image: "{{ forksNodeForkIdentifier }}:latest"
+    hostname: "{{ forksComponentIdentifier }}"
     state: "{{ forksComponentEnabled|ternary('started', 'stopped') }}"
     recreate: yes
     restart_policy: unless-stopped
     env:
       service: "{{ forksComponentService }}"
       log_level: INFO
-      keys: "/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics"
+      #keys: "/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics"
     networks:
-      - name: "{{ forksComponentIdentifier }}-network"
-    published_ports:
-      - "{{ forkBuildRequirementsDescriptor.nodePort }}:{{ forkBuildRequirementsDescriptor.nodePort }}"
+      - name: "{{ forksNodeForkIdentifier }}-network"
+    published_ports: "{{ forksPublishedPortsLookupTable[forksComponentService] }}"
     volumes:
-      - "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forksComponentIdentifier }}"
+      - "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}:/root/.{{ forksConfigurationDirectory }}"
     container_default_behavior: no_defaults
-    network_mode: "{{ forksComponentIdentifier }}-network"
+    network_mode: "{{ forksNodeForkIdentifier }}-network"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
     DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
-  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
-  loop_control:
-    loop_var: forkRequirementsInstanceItem
 
 
   ## Wallet container
 
-- name: "Start {{ forksComponentIdentifier|capitalize }} wallet only container"
-  when: forksComponentService == 'wallet'
-  become: true
-  become_user: "{{ forksNodeSystemUsername }}"
-  community.docker.docker_container:
-    name: "{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
-    image: "{{ forksComponentIdentifier }}:latest"
-    hostname: "{{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }}"
-    state: "{{ forksComponentEnabled|ternary('started', 'stopped') }}"
-    recreate: yes
-    restart_policy: unless-stopped
-    env:
-      service: "{{ forksComponentService }}"
-      fullnode_address: "{{ forksComponentIdentifier }}.{{ forkBuildRequirementsDescriptor.fullnodeName }}"
-      log_level: INFO
-      keys: "/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics"
-    networks:
-      - name: "{{ forksComponentIdentifier }}-network"
-    volumes:
-      - "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forksComponentIdentifier }}"
-    container_default_behavior: no_defaults
-    network_mode: "{{ forksComponentIdentifier }}-network"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
-  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
-  loop_control:
-    loop_var: forkRequirementsInstanceItem
+# - name: "Start {{ forksComponentIdentifier|capitalize }} wallet only container"
+#   when: forksComponentService == 'wallet'
+#   become: true
+#   become_user: "{{ forksNodeSystemUsername }}"
+#   community.docker.docker_container:
+#     name: "{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+#     image: "{{ forksComponentIdentifier }}:latest"
+#     hostname: "{{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }}"
+#     state: "{{ forksComponentEnabled|ternary('started', 'stopped') }}"
+#     recreate: yes
+#     restart_policy: unless-stopped
+#     env:
+#       service: "{{ forksComponentService }}"
+#       fullnode_address: "{{ forksComponentIdentifier }}.{{ forkBuildRequirementsDescriptor.fullnodeName }}"
+#       log_level: INFO
+#       keys: "/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics"
+#     networks:
+#       - name: "{{ forksComponentIdentifier }}-network"
+#     volumes:
+#       - "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forksComponentIdentifier }}"
+#     container_default_behavior: no_defaults
+#     network_mode: "{{ forksComponentIdentifier }}-network"
+#   environment:
+#     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
+#     DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
+#   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+#   loop_control:
+#     loop_var: forkRequirementsInstanceItem
 
 
   ## Harvester container
 
-- name: "Ensure {{ forksComponentIdentifier|capitalize }} CA cert(s) local directory"
-  when: forksComponentService == 'harvester'
-  become: true
-  file:
-    path: "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert"
-    state: directory
-    owner: "{{ forksNodeSystemUsername }}"
-    group: "{{ forksNodeSystemUsername }}"
-    mode: 0700
-  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
-  loop_control:
-    loop_var: forkRequirementsInstanceItem
+# - name: "Ensure {{ forksComponentIdentifier|capitalize }} CA cert(s) local directory"
+#   when: forksComponentService == 'harvester'
+#   become: true
+#   file:
+#     path: "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert"
+#     state: directory
+#     owner: "{{ forksNodeSystemUsername }}"
+#     group: "{{ forksNodeSystemUsername }}"
+#     mode: 0700
+#   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+#   loop_control:
+#     loop_var: forkRequirementsInstanceItem
 
-- name: "Place {{ forksComponentIdentifier|capitalize }} CA cert(s) in local directory"
-  when: forksComponentService == 'harvester'
-  vars:
-    contextProductStoreAction: restore
-    contextComponentIdentifier: "{{ forksComponentIdentifier }}"
-    contextProductOrganization: "{{ forksVendorIdentifier }}"
-    contextProductLabel: "ca_cert-{{ forkRequirementsInstanceItem.farmerAddress }}-{{ forksComponentIdentifier }}"
-    contextProductDirectory: "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert/ca"
-    contextSystemUser: "{{ forksNodeSystemUsername }}"
-  include_tasks: productStore.yml
-  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
-  loop_control:
-    loop_var: forkRequirementsInstanceItem
-  tags: certificates
+# - name: "Place {{ forksComponentIdentifier|capitalize }} CA cert(s) in local directory"
+#   when: forksComponentService == 'harvester'
+#   vars:
+#     contextProductStoreAction: restore
+#     contextComponentIdentifier: "{{ forksComponentIdentifier }}"
+#     contextProductOrganization: "{{ forksVendorIdentifier }}"
+#     contextProductLabel: "ca_cert-{{ forkRequirementsInstanceItem.farmerAddress }}-{{ forksComponentIdentifier }}"
+#     contextProductDirectory: "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert/ca"
+#     contextSystemUser: "{{ forksNodeSystemUsername }}"
+#   include_tasks: productStore.yml
+#   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+#   loop_control:
+#     loop_var: forkRequirementsInstanceItem
+#   tags: certificates
 
   #HINT: Double regex map due to bug of ansible map filter "xxx:xxx:"
-- name: "Start {{ forksComponentIdentifier|capitalize }} harvester container"
-  when: forksComponentService == 'harvester'
-  become: true
-  become_user: "{{ forksNodeSystemUsername }}"
-  community.docker.docker_container:
-    name: "{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
-    image: "{{ forksComponentIdentifier }}:latest"
-    hostname: "{{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }}"
-    state: "{{ forksComponentEnabled|ternary('started', 'stopped') }}"
-    recreate: yes
-    restart_policy: unless-stopped
-    env:
-      service: "{{ forksComponentService }}"
-      farmer_address: "{{ forkRequirementsInstanceItem.farmerAddress }}"
-      farmer_port: "{{ forkRequirementsInstanceItem.farmerPort }}"
-      plots_dir: "{{ (forkRequirementsInstanceItem.plotDirectories|default([]))|join(':') }}"
-      ca: "/root/.{{ forksComponentIdentifier }}-cacert/ca"
-      log_level: INFO
-      keys: "copy"
-    networks:
-      - name: "{{ forksComponentIdentifier }}-network"
-    volumes: "{{ [forksNodeHomeDirectory + '/.' + forksComponentIdentifier + '-' + forkRequirementsInstanceItem.name + '/:/root/.' + forksComponentIdentifier+'/'] + [forksNodeHomeDirectory + '/.' + forksComponentIdentifier + '-' + forkRequirementsInstanceItem.name + '-cacert/ca:/root/.' + forksComponentIdentifier+'-cacert/ca'] + (forkRequirementsInstanceItem.plotDirectories|default([]) | map('regex_replace', '(.*)', '\\1:\\1') | map('regex_replace', '(.*):', '\\1') | list) }}"
-    container_default_behavior: no_defaults
-    network_mode: "{{ forksComponentIdentifier }}-network"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
-    DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
-  loop: "{{ forkBuildRequirementsDescriptor.instances }}"
-  loop_control:
-    loop_var: forkRequirementsInstanceItem
-  tags: certificates
+# - name: "Start {{ forksComponentIdentifier|capitalize }} harvester container"
+#   when: forksComponentService == 'harvester'
+#   become: true
+#   become_user: "{{ forksNodeSystemUsername }}"
+#   community.docker.docker_container:
+#     name: "{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}"
+#     image: "{{ forksComponentIdentifier }}:latest"
+#     hostname: "{{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }}"
+#     state: "{{ forksComponentEnabled|ternary('started', 'stopped') }}"
+#     recreate: yes
+#     restart_policy: unless-stopped
+#     env:
+#       service: "{{ forksComponentService }}"
+#       farmer_address: "{{ forkRequirementsInstanceItem.farmerAddress }}"
+#       farmer_port: "{{ forkRequirementsInstanceItem.farmerPort }}"
+#       plots_dir: "{{ (forkRequirementsInstanceItem.plotDirectories|default([]))|join(':') }}"
+#       ca: "/root/.{{ forksComponentIdentifier }}-cacert/ca"
+#       log_level: INFO
+#       keys: "copy"
+#     networks:
+#       - name: "{{ forksComponentIdentifier }}-network"
+#     volumes: "{{ [forksNodeHomeDirectory + '/.' + forksComponentIdentifier + '-' + forkRequirementsInstanceItem.name + '/:/root/.' + forksComponentIdentifier+'/'] + [forksNodeHomeDirectory + '/.' + forksComponentIdentifier + '-' + forkRequirementsInstanceItem.name + '-cacert/ca:/root/.' + forksComponentIdentifier+'-cacert/ca'] + (forkRequirementsInstanceItem.plotDirectories|default([]) | map('regex_replace', '(.*)', '\\1:\\1') | map('regex_replace', '(.*):', '\\1') | list) }}"
+#     container_default_behavior: no_defaults
+#     network_mode: "{{ forksComponentIdentifier }}-network"
+#   environment:
+#     XDG_RUNTIME_DIR: "/run/user/{{ forkUserIdShellResult.stdout }}"
+#     DOCKER_HOST: "unix:///run/user/{{ forkUserIdShellResult.stdout }}/docker.sock"   
+#   loop: "{{ forkBuildRequirementsDescriptor.instances }}"
+#   loop_control:
+#     loop_var: forkRequirementsInstanceItem
+#   tags: certificates
 
 
   #HINT: To prevent corruption of blockchain databases

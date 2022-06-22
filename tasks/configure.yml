@@ -16,6 +16,8 @@
     loop_var: forksNodeForkIdentifier
 
 - name: Configure Fork Docker Components
+  vars:
+    forksNodeForkIdentifier: "{{ forksComponentItem.fork }}"
   include_tasks: configure-docker.yml
   loop: >-
     {{ forksComponentsConfiguration
@@ -25,6 +27,8 @@
   loop_control:
     loop_var: forksComponentItem
 
+
+  ## Commons
   
 - name: Assign Chia fork instance group to managing user
   become: true

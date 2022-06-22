@@ -15,7 +15,7 @@ forksComponentEnabled: >-
   | ternary(forksComponentItem.enabled, true) }}
 forksConfigurationDirectory: >-
   {{ forksNodeHomeDirectory }}/{{ ('config' in forksComponentItem)
-  | ternary(forksComponentItem.config, '.'+forksComponentIdentifier) }}
+  | ternary(forksComponentItem.config, '.'+forksNodeForkIdentifier) }}
 
 
 forksNodeSystemUsername: >-
@@ -100,6 +100,42 @@ forksRepositoryIdentifierLookupTable:
   chives: HiveProject2021/chives-blockchain
   silicoin: zcomputerwiz/silicoin-blockchain
   ecostake: Ecostake-Network/ecostake-blockchain
+
+forksPortLookupTable:
+  chia:
+    node: 8444
+    nodeRpc: 8555
+    farmer: 8447
+  chives:
+    node: 9699
+    nodeRpc: 9755
+    farmer: 9647
+  silicoin:
+    node: 22222
+    nodeRpc: 22555
+    farmer: 22447
+  ecostake:
+    node: 38444
+    nodeRpc: 38554
+    farmer: 38441
+
+
+forksPublishedPortsLookupTable:
+  all:
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+  node:
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+  farmer:
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+  farmer-no-wallet:
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+  farmer-only:
+    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+  wallet: []
+  wallet-only: []
 
 
 ...
