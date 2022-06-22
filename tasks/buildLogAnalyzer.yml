@@ -2,7 +2,7 @@
 
   # Latest version result: chiaLoganalyzerSourceGithubResult.recommended_version
 - name: Determine Chia Loganalyzer latest release version
-  maveno_de.forks_collection.source_github:
+  maveno_de.forks.source_github:
     owner: kubec
     repo: chia-log-analyzer
   environment:

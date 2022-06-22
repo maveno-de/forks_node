@@ -3,7 +3,7 @@
 
 - name: Ensure Forks Python virtual environment
   include_role:
-    name: maveno_de.forks_collection.forks_utilities
+    name: maveno_de.forks.forks_utilities
     tasks_from: ensureVirtualEnvironment.yml
 
 
