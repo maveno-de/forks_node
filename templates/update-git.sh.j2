@@ -1,10 +1,10 @@
 #!/bin/bash
 
-USER_NAME='{{ forksComponentSystemUsername }}'
-SERVICE_NAME='{{ forksServiceName }}'
-EXECUTABLE_NAME='{{ forksComponentExecutableName }}'
-HOME_DIR="{{ forksComponentHomeDirectory }}"
-APP_DIR="{{ forksComponentApplicationDirectory }}"
+USER_NAME='{{ forksNodeSystemUsername }}'
+SERVICE_NAME='{{ forksNodeServiceName }}'
+EXECUTABLE_NAME='{{ forksNodeExecutableName }}'
+HOME_DIR="{{ forksNodeHomeDirectory }}"
+APP_DIR="{{ forksNodeApplicationDirectory }}"
 CONFIG_DIR_NAME="{{ forksConfigurationDirectory|basename }}"
 GITHUB_REPO_IDENTIFIER='{{ forkBuildRequirementsDescriptor.repositoryIdentifier }}'
 GITHUB_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO_IDENTIFIER}/releases/latest"
@@ -28,7 +28,7 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         chmod 'ug+x' "${APP_DIR}/install.sh"
         su - "${USER_NAME}" -c "cd ${APP_DIR} && ./install.sh"
         deluser "${USER_NAME}" 'sudo'
-{% if forkPermissionsFix %}
+{% if forksNodePermissionsFix %}
         su - "${USER_NAME}" -c "chmod go-rwx -R ${CONFIG_DIR_NAME}/mainnet/config/ssl"
         su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init"
 {% else %}

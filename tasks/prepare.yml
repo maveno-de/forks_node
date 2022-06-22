@@ -1,6 +1,12 @@
 ---
 
 
+- name: Ensure Forks Python virtual environment
+  include_role:
+    name: maveno_de.forks_collection.forks_utilities
+    tasks_from: ensureVirtualEnvironment.yml
+
+
 - name: Update local CA certs
   become: true
   shell: update-ca-certificates
@@ -11,9 +17,9 @@
 - name: Stop Chia fork services
   vars:
     baremetalComponents: >-
-     {{ (forksComponentsConfigurationDescriptor
+     {{ (forksComponentsConfiguration
      | selectattr('build', 'undefined')
-     + forksComponentsConfigurationDescriptor
+     + forksComponentsConfiguration
      | selectattr('build', 'defined')
      | selectattr('build', 'equalto', 'git'))
      | selectattr('host', 'equalto', inventory_hostname) }}
@@ -120,11 +126,48 @@
 #   template:
 #     src: backup-forks.sh.j2
 #     dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-forks.sh"
-#     force: yes
+#     force: true
 #     owner: "{{ forksManagingSystemUsername|default('root') }}"
 #     group: "{{ forksManagingSystemUsername|default('root') }}"
 #     mode: 0755
 #   tags: services
+
+
+  ## Node specific
+
+- name: Prepare Fork nodes
+  include_tasks: prepare-node.yml
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | map(attribute='fork') | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifier
+
+- name: Prepare Fork Git nodes
+  include_tasks: prepare-git.yml
+  loop: >-
+    {{ (forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git'))
+    | map(attribute='fork') | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifier
+
+- name: Prepare Fork Docker nodes
+  include_tasks: prepare-docker.yml
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'docker')
+    | map(attribute='fork') | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifier
 
 
 ...

@@ -1,55 +1,55 @@
 ---
 
 
-- name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"
-  when: 
-    - forksComponentComponentType != 'harvester'
-    - "'mnemonics' in (lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forksComponentIdentifier].keys()" #!
-  become: true
-  block:
-
-    - name: "Place {{ forksComponentIdentifier|capitalize }} mnemonics file"
-      copy:
-        dest: "{{ forksComponentApplicationDirectory }}/.mnemonics"
-        content: "{{ (lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forksComponentIdentifier].mnemonics }}" #!
-        owner: "{{ forksComponentSystemUsername }}"
-        group: "{{ forksComponentSystemUsername }}"
-        mode: 0600
-
-    - name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"
-      become_user: "{{ forksComponentSystemUsername }}"
-      shell: >
-        . {{ forksComponentApplicationDirectory }}/venv/bin/activate
-        && {{ forksComponentExecutableName }} keys add
-        -f {{ forksComponentApplicationDirectory }}/.mnemonics
-      args:
-        chdir: "{{ forksComponentApplicationDirectory }}"
-        executable: /bin/bash
-
-  always:
-    - name: Remove mnemonics file
-      file:
-        path: "{{ forksComponentApplicationDirectory }}/.mnemonics"
-        state: absent
+# - name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"
+#   when: 
+#     - forksComponentService != 'harvester'
+#     - "'mnemonics' in (lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forksComponentIdentifier].keys()" #!
+#   become: true
+#   block:
+# 
+#     - name: "Place {{ forksComponentIdentifier|capitalize }} mnemonics file"
+#       copy:
+#         dest: "{{ forksNodeApplicationDirectory }}/.mnemonics"
+#         content: "{{ (lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forksComponentIdentifier].mnemonics }}" #!
+#         owner: "{{ forksNodeSystemUsername }}"
+#         group: "{{ forksNodeSystemUsername }}"
+#         mode: 0600
+# 
+#     - name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"
+#       become_user: "{{ forksNodeSystemUsername }}"
+#       shell: >
+#         . {{ forksNodeApplicationDirectory }}/venv/bin/activate
+#         && {{ forksNodeExecutableName }} keys add
+#         -f {{ forksNodeApplicationDirectory }}/.mnemonics
+#       args:
+#         chdir: "{{ forksNodeApplicationDirectory }}"
+#         executable: /bin/bash
+# 
+#   always:
+#     - name: Remove mnemonics file
+#       file:
+#         path: "{{ forksNodeApplicationDirectory }}/.mnemonics"
+#         state: absent
 
 
   ## Firewall
 
-- name: "Allow {{ forksComponentIdentifier|capitalize }} node network traffic"
-  when: 
-    - "'nodePort' in forksComponentItem"
-    - forksComponentComponentType != 'harvester'
-  become: true
-  ufw:
-    rule: allow
-    port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
-    proto: tcp
+# - name: "Allow {{ forksComponentIdentifier|capitalize }} node network traffic"
+#   when: 
+#     - "'nodePort' in forksComponentItem"
+#     - forksComponentService != 'harvester'
+#   become: true
+#   ufw:
+#     rule: allow
+#     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
+#     proto: tcp
 
    #TODO: Man kann den Port nicht schließen wenn unbekannt....
 #- name: "Deny {{ forksComponentIdentifier|capitalize }} node network traffic"
 #  when: >
 #    not 'nodePort' in forksComponentItem
-#    or forksComponentComponentType == 'harvester'
+#    or forksComponentService == 'harvester'
 #  become: true
 #  ufw:
 #    rule: allow
@@ -57,122 +57,122 @@
 #    proto: tcp
 #    delete: yes
 
-- name: "Allow {{ forksComponentIdentifier|capitalize }} farmer network traffic"
-  when: 
-    - "'farmerPort' in forksComponentItem"
-    - forksComponentComponentType != 'harvester'
-  become: true
-  ufw:
-    rule: allow
-    port: "{{ forkBuildRequirementsDescriptor.farmerPort }}"
-    proto: tcp
+# - name: "Allow {{ forksComponentIdentifier|capitalize }} farmer network traffic"
+#   when: 
+#     - "'farmerPort' in forksComponentItem"
+#     - forksComponentService != 'harvester'
+#   become: true
+#   ufw:
+#     rule: allow
+#     port: "{{ forkBuildRequirementsDescriptor.farmerPort }}"
+#     proto: tcp
 
 
   # Cronjobs
 
-- name: "Adds paths to CA certs to {{ forksComponentIdentifier|capitalize }} crontab"
-  become: true
-  cron:
-    name: REQUESTS_CA_BUNDLE
-    user: "{{ forksComponentSystemUsername }}"
-    env: yes
-    job: "{{ forksSystemCaCertificatesFilePath }}"
-
-- name: "Adds certs path to {{ forksComponentIdentifier|capitalize }} crontab"
-  become: true
-  cron:
-    name: SSL_CERT_DIR
-    user: "{{ forksComponentSystemUsername }}"
-    env: yes
-    job: /etc/ssl/certs
+# - name: "Adds paths to CA certs to {{ forksComponentIdentifier|capitalize }} crontab"
+#   become: true
+#   cron:
+#     name: REQUESTS_CA_BUNDLE
+#     user: "{{ forksNodeSystemUsername }}"
+#     env: yes
+#     job: "{{ forksSystemCaCertificatesFilePath }}"
+# 
+# - name: "Adds certs path to {{ forksComponentIdentifier|capitalize }} crontab"
+#   become: true
+#   cron:
+#     name: SSL_CERT_DIR
+#     user: "{{ forksNodeSystemUsername }}"
+#     env: yes
+#     job: /etc/ssl/certs
 
 
   # Auto-updates
 
-- name: "Generate {{ forksComponentIdentifier|capitalize }} auto-update script"
-  when:
-    - forkBuildRequirementsDescriptor.updateHour is defined
-    - forkBuildRequirementsDescriptor.updateMinute is defined
-  become: true
-  template:
-    src: update-git.sh.j2
-    dest: "{{ forksManagingLocalBinaryDirectory }}/update-{{ forksComponentIdentifier }}.sh"
-    force: yes
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
-    mode: 0750
-  tags: services
+# - name: "Generate {{ forksComponentIdentifier|capitalize }} auto-update script"
+#   when:
+#     - forkBuildRequirementsDescriptor.updateHour is defined
+#     - forkBuildRequirementsDescriptor.updateMinute is defined
+#   become: true
+#   template:
+#     src: update-git.sh.j2
+#     dest: "{{ forksManagingLocalBinaryDirectory }}/update-{{ forksComponentIdentifier }}.sh"
+#     force: true
+#     owner: "{{ forksManagingSystemUsername|default('root') }}"
+#     group: "{{ forksManagingSystemUsername|default('root') }}"
+#     mode: 0750
+#   tags: services
 
-- name: "Setup daily cronjob for {{ forksComponentIdentifier|capitalize }} auto-update"
-  when:
-    - forkBuildRequirementsDescriptor.updateHour is defined
-    - forkBuildRequirementsDescriptor.updateMinute is defined
-  become: true
-  cron:
-    name: "{{ forksComponentIdentifier|capitalize }} daily auto-update"
-    user: "{{ forksManagingSystemUsername|default('root') }}"
-    hour: "{{ forkBuildRequirementsDescriptor.updateHour|string }}"
-    minute: "{{ forkBuildRequirementsDescriptor.updateMinute|string }}"
-    job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksComponentIdentifier }}.sh 1>/dev/null 2>&1"
-  tags: services
+# - name: "Setup daily cronjob for {{ forksComponentIdentifier|capitalize }} auto-update"
+#   when:
+#     - forkBuildRequirementsDescriptor.updateHour is defined
+#     - forkBuildRequirementsDescriptor.updateMinute is defined
+#   become: true
+#   cron:
+#     name: "{{ forksComponentIdentifier|capitalize }} daily auto-update"
+#     user: "{{ forksManagingSystemUsername|default('root') }}"
+#     hour: "{{ forkBuildRequirementsDescriptor.updateHour|string }}"
+#     minute: "{{ forkBuildRequirementsDescriptor.updateMinute|string }}"
+#     job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksComponentIdentifier }}.sh 1>/dev/null 2>&1"
+#   tags: services
 
 
-- name: Slurp .bashrc file from managing user
-  become: true
-  slurp:
-    src: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
-  register: managingUserBashRcResult
-  tags: utilities
+# - name: Slurp .bashrc file from managing user
+#   become: true
+#   slurp:
+#     src: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+#   register: managingUserBashRcResult
+#   tags: utilities
 
-- name: Cache content of managung user .bashrc file
-  set_fact:
-    managingUserBashRcFileContent: "{{ managingUserBashRcResult['content'] | b64decode }}"
-  tags: utilities
+# - name: Cache content of managung user .bashrc file
+#   set_fact:
+#     managingUserBashRcFileContent: "{{ managingUserBashRcResult['content'] | b64decode }}"
+#   tags: utilities
 
   #TODO: Separate into utils/services
-- name: "Adding aliases for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
-  when: not forkBuildRequirementsDescriptor.alias|default(forksComponentIdentifier) in managingUserBashRcFileContent
-  become: true
-  lineinfile:
-    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
-    line: |
-      {{ forkBuildRequirementsDescriptor.alias|default(forksComponentIdentifier) }}() {
-          sudo su - {{ forksComponentIdentifier }} -c "{{ forksComponentApplicationDirectory }}/venv/bin/{{ forksComponentExecutableName }} $*"
-      }
-    insertafter: '^#NON-INTERACTIVE.*'
-  tags: utilities
+# - name: "Adding aliases for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
+#   when: not forkBuildRequirementsDescriptor.alias|default(forksComponentIdentifier) in managingUserBashRcFileContent
+#   become: true
+#   lineinfile:
+#     path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+#     line: |
+#       {{ forkBuildRequirementsDescriptor.alias|default(forksComponentIdentifier) }}() {
+#           sudo su - {{ forksComponentIdentifier }} -c "{{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} $*"
+#       }
+#     insertafter: '^#NON-INTERACTIVE.*'
+#   tags: utilities
 
-- name: "Adding tail alias for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
-  become: true
-  lineinfile:
-    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
-    line: >-
-      alias tail_{{ forkBuildRequirementsDescriptor.alias
-      | default(forksComponentIdentifier) }}="sudo tail -f {{ forksConfigurationDirectory }}/mainnet/log/debug.log"
-    insertafter: '^#NON-INTERACTIVE.*'
-  tags: utilities
+# - name: "Adding tail alias for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
+#   become: true
+#   lineinfile:
+#     path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+#     line: >-
+#       alias tail_{{ forkBuildRequirementsDescriptor.alias
+#       | default(forksComponentIdentifier) }}="sudo tail -f {{ forksConfigurationDirectory }}/mainnet/log/debug.log"
+#     insertafter: '^#NON-INTERACTIVE.*'
+#   tags: utilities
 
-- name: "Adding log inspector alias for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
-  when: "'fullnode' in forksComponentComponentType"
-  become: true
-  lineinfile:
-    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
-    line: >-
-      alias inspect_{{ forkBuildRequirementsDescriptor.alias
-      | default(forksComponentIdentifier) }}="{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/chia-log-analyzer
-      --log={{ forksConfigurationDirectory }}/mainnet/log/debug.log"
-    insertafter: '^#NON-INTERACTIVE.*'
-  tags: utilities
+# - name: "Adding log inspector alias for {{ forksComponentIdentifier|capitalize }} to .bashrc of managing user"
+#   when: "'fullnode' in forksComponentService"
+#   become: true
+#   lineinfile:
+#     path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+#     line: >-
+#       alias inspect_{{ forkBuildRequirementsDescriptor.alias
+#       | default(forksComponentIdentifier) }}="{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/chia-log-analyzer
+#       --log={{ forksConfigurationDirectory }}/mainnet/log/debug.log"
+#     insertafter: '^#NON-INTERACTIVE.*'
+#   tags: utilities
 
 
 ## Active Farmers
 
 #- name: "Appending invocation of showFarmer for {{ forksComponentIdentifier|capitalize }} instance"
-#  when: "'farmer' in forksComponentComponentType"
+#  when: "'farmer' in forksComponentService"
 #  become: true
 #  lineinfile:
 #    path: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/show_farmers.sh"
-#    line: "showFarmer {{ forksServiceName }}"
+#    line: "showFarmer {{ forksNodeServiceName }}"
 #    insertafter: EOL
 #  tags: utilities
 
@@ -181,7 +181,7 @@
 ## Node Performance
 
 #- name: Adding aliases for showing node performance to shell of managing user
-#  when: "'fullnode' in forksComponentComponentType"
+#  when: "'fullnode' in forksComponentService"
 #  become: true
 #  lineinfile:
 #    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
@@ -190,7 +190,7 @@
 #  tags: utilities
 
 #- name: "Adding log file for {{ forksComponentIdentifier|capitalize }}"
-#  when: "'fullnode' in forksComponentComponentType"
+#  when: "'fullnode' in forksComponentService"
 #  become: true
 #  lineinfile:
 #    path: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/node_performance.py"
@@ -203,6 +203,19 @@
 #  set_fact:
 #    forksInstallForktools: yes
 #  tags: utilities
+
+
+
+  #HINT: Starting Chia fork services the latest possible to prevent timeouts
+  # when building due to cpu time consumption
+- name: Start Forks services
+  become: true
+  systemd:
+    name: "{{ forksNodeServiceName }}.service"
+    daemon-reload: yes
+    enabled: "{{ forksNodeEnabled }}"
+    state: "{{ forksNodeEnabled|ternary('restarted', 'stopped') }}"
+  changed_when: false
 
 
 ...

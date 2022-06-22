@@ -3,69 +3,9 @@
 
 - name: Prepare Chia forks installation
   include_tasks: prepare.yml
-  tags:
-    - utilities
-    - services
 
-
-
-  #HINT: Referencing vars in vars here
-- name: Build Chia forks
-  vars:
-    forksComponentIdentifier: >-
-      {{ forksComponentItem.identifier }}
-    forksComponentForkIdentifier: >-
-      {{ forksComponentItem.fork }}
-    forksComponentComponentType: >-
-      {{ ('component' in forksComponentItem)
-      | ternary(forksComponentItem.component, 'node') }}
-    forksComponentBuildOption: >-
-      {{ ('build' in forksComponentItem)
-      | ternary(forksComponentItem.build, 'git') }}
-    forksComponentEnabled: >-
-      {{ ('enabled' in forksComponentItem)
-      | ternary(forksComponentItem.enabled, true) }}
-    forksComponentSystemUsername: >-
-      {{ ('username' in forksComponentItem)
-      | ternary(forksComponentItem.username, forksComponentIdentifier) }}
-    forksComponentHomeDirectory: >-
-      {{ ('home' in forksComponentItem)
-      | ternary(forksComponentItem.home,
-      forksUserRootDirectory + '/' + forksComponentSystemUsername) }}
-    forksConfigurationDirectory: >-
-      {{ forksComponentHomeDirectory }}/{{ ('config' in forksComponentItem)
-      | ternary(forksComponentItem.config, '.'+forksComponentIdentifier) }}
-    forksBinaryDirectory: "{{ forksComponentHomeDirectory }}/.local/bin"
-    forksSharedDirectory: "{{ forksComponentHomeDirectory }}/.local/share"
-    forksComponentRepositoryIdentifier: >-
-      {{ forksRepositoryIdentifierLookupTable[forksComponentIdentifier] }}
-    forksComponentBranch: >-
-      {{ ('branch' in forksComponentItem)
-      | ternary(forksComponentItem.branch, forksDefaultBranch) }}
-    forksComponentApplicationDirectoryName: >-
-      {{ forksComponentRepositoryIdentifier
-      | regex_search('[^/]+$') }}
-    forksComponentApplicationDirectory: >-
-      {{ forksComponentHomeDirectory }}/.local/share/{{ forksComponentApplicationDirectoryName }}
-    forksServiceName: >-
-      {{ ('service' in forksComponentItem)
-      | ternary(forksComponentItem.service, forksComponentIdentifier) }}
-    forksComponentExecutableName: >-
-      {{ ('executable' in forksComponentItem)
-      | ternary(forksComponentItem.executable, forksComponentIdentifier) }}
-    forksComponentPermissionsFix: >-
-      {{ ('permissions' in forksComponentItem)
-      | ternary(forksComponentItem.permissions, 'false') }}
-  include_tasks: buildFork.yml
-  tags:
-    - utilities
-    - services
-    - certificates
-  loop: >-
-    {{ forksComponentsConfigurationDescriptor
-    | selectattr('host', 'equalto', inventory_hostname) }}
-  loop_control:
-    loop_var: forksComponentItem
+- name: Install Chia forks
+  include_tasks: install.yml
 
 
 - name: Configure Chia forks installation
@@ -73,36 +13,6 @@
   tags:
     - utilities
     - services
-
-
-  #HINT: Starting Chia fork services the latest possible to prevent timeouts
-  # when building due to cpu time consumption
-- name: Start Forks services
-  vars:
-    baremetalComponents: >-
-     {{ forksComponentsConfigurationDescriptor
-     | selectattr('build', 'undefined')
-     + forksComponentsConfigurationDescriptor
-     | selectattr('build', 'defined')
-     | selectattr('build', 'equalto', 'git') }}
-    forksServiceName: >-
-      {{ ('service' in baremetalComponentsItem)
-      | ternary(baremetalComponentsItem.service, baremetalComponentsItem.identifier) }}
-    forksComponentEnabled: >-
-      {{ ('enabled' in baremetalComponentsItem)
-      | ternary(baremetalComponentsItem.enabled, true) }}
-  become: true
-  systemd:
-    name: "{{ forksServiceName }}.service"
-    daemon-reload: yes
-    enabled: "{{ forksComponentEnabled }}"
-    state: "{{ forksComponentEnabled|ternary('restarted', 'stopped') }}"
-  changed_when: false
-  failed_when: false
-  loop: "{{ baremetalComponents }}"
-  loop_control:
-    loop_var: baremetalComponentsItem
-  tags: certificates
 
 
 ...

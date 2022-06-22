@@ -1,6 +1,85 @@
 ---
 
 
+forksComponentIdentifier: >-
+  {{ forksComponentItem.identifier }}
+
+forksComponentService: >-
+  {{ ('component' in forksComponentItem)
+  | ternary(forksComponentItem.component, 'node') }}
+forksComponentBuildOption: >-
+  {{ ('build' in forksComponentItem)
+  | ternary(forksComponentItem.build, 'git') }}
+forksComponentEnabled: >-
+  {{ ('enabled' in forksComponentItem)
+  | ternary(forksComponentItem.enabled, true) }}
+forksConfigurationDirectory: >-
+  {{ forksNodeHomeDirectory }}/{{ ('config' in forksComponentItem)
+  | ternary(forksComponentItem.config, '.'+forksComponentIdentifier) }}
+
+
+forksNodeSystemUsername: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'systemUsername' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['systemUsername'], forksNodeForkIdentifier) }}
+forksNodeHomeDirectory: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'homeDirectory' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['homeDirectory'], 
+  forksUserRootDirectory + '/' + forksNodeSystemUsername) }}
+
+forksNodeRepositoryIdentifier: >-
+  {{ forksRepositoryIdentifierLookupTable[forksNodeForkIdentifier] }}
+forksNodeApplicationDirectoryName: >-
+  {{ forksNodeRepositoryIdentifier
+  | regex_search('[^/]+$') }}
+
+forksNodeBinaryDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/bin
+forksNodeSharedDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/share
+forksNodeApplicationDirectory: >-
+  {{ forksNodeSharedDirectory }}/{{ forksNodeApplicationDirectoryName }}
+
+forksNodeServiceName: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'serviceName' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['serviceName'], forksNodeForkIdentifier) }}
+forksNodeEnabled: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'enabled' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['enabled'], true) }}
+forksNodeExecutableName: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'executableName' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['executableName'], forksNodeForkIdentifier) }}
+forksNodePermissionsFix: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'permissionsFix' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['permissionsFix'], false) }}
+forksNodeDefaultBranch: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'defaultBranch' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['defaultBranch'], forksDefaultBranch) }}
+forksNodePipInstallation: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'pipInstallation' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['pipInstallation'], false) }}
+forksNodeEnvironmentVariables: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'environmentVariables' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['environmentVariables'], []) }}
+
+
 forksArchitectureLookupTable:
   arm64: arm64
   armhf: arm64
@@ -15,15 +94,6 @@ forksLogAnalyzerArchitectureLookupTable:
   amd64: amd64
   armhf: arm
   arm64: arm
-
-forksStartOptionLookupTable:
-  fullnode+wallet: wallet
-  fullnode+farmer: farmer-no-wallet
-  farmer: farmer-only
-  wallet: wallet-only
-  harvester: harvester
-  fullnode: node
-
 
 forksRepositoryIdentifierLookupTable:
   chia: Chia-Network/chia-blockchain

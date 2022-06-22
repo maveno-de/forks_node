@@ -1,5 +1,30 @@
 ---
 
+
+- name: Configure Fork Git nodes
+  include_tasks: configure-git.yml
+  loop: >-
+    {{ (forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git'))
+    | map(attribute='fork') | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifier
+
+- name: Configure Fork Docker Components
+  include_tasks: configure-docker.yml
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'docker') }}
+  loop_control:
+    loop_var: forksComponentItem
+
   
 - name: Assign Chia fork instance group to managing user
   become: true
@@ -9,8 +34,8 @@
       - "{{ forkSystemUsernameItem }}"
     append: yes
   loop: >-
-    {{ (forksComponentsConfigurationDescriptor|selectattr('username', 'defined')|map(attribute='username')
-    + forksComponentsConfigurationDescriptor|selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
+    {{ (forksComponentsConfiguration|selectattr('username', 'defined')|map(attribute='username')
+    + forksComponentsConfiguration|selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
   loop_control:
     loop_var: forkSystemUsernameItem
 

@@ -52,7 +52,7 @@ forks:
     forksVariableDirectory: /var/local/{{ forksVendorIdentifier }}/lib
 
     forksSystemPythonInterpreter: /usr/bin/python3
-    forksVenvInterpreter /usr/local/{{ forksVendorIdentifier }}/share/{{ forksVendorIdentifier }}.venv/bin/python
+    forksVenvInterpreterPath /usr/local/{{ forksVendorIdentifier }}/share/{{ forksVendorIdentifier }}.venv/bin/python
 
     forksPublicSshKeys:
       - name: 'SSH public key 1'
@@ -266,7 +266,7 @@ This is a basic playbook for the application of the role.
 
     - name: Switch to Python virtual environment of framework service
       set_fact:
-        ansible_python_interpreter: "{{ forksVenvInterpreter }}"
+        ansible_python_interpreter: "{{ forksVenvInterpreterPath }}"
       tags:
         - utilities
         - services

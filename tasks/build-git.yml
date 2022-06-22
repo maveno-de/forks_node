@@ -1,0 +1,204 @@
+---
+
+
+- name: "Remove {{ forksNodeForkIdentifier|capitalize }} application directory"
+  become: true
+  file: 
+    path: "{{ forksNodeApplicationDirectory }}"
+    state: absent
+
+
+- name: "Clone {{ forksNodeForkIdentifier|capitalize }} blockchain repository into source directory"
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  git:
+    dest: "{{ forksNodeApplicationDirectory }}"
+    repo: "https://github.com/{{ forksNodeRepositoryIdentifier }}.git"
+    force: true
+    update: yes
+    recursive: yes
+    version: "{{ forksNodeDefaultBranch }}"
+    umask: '0027'
+
+- name: Make installer executable
+  become: true
+  file: 
+    path: "{{ forksNodeApplicationDirectory }}/install.sh"
+    mode: 0750
+
+
+- name: "Add {{ forksNodeForkIdentifier|capitalize }} user to sudo group"
+  become: true
+  user:
+    name: "{{ forksNodeSystemUsername }}"
+    groups:
+      - sudo
+    append: true
+
+
+- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain"
+  when: forksNodeEnvironmentVariables|length == 0
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  shell: ./install.sh
+  args:
+    chdir: "{{ forksNodeApplicationDirectory }}"
+    executable: /bin/sh
+  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  poll: 0
+  register: installBlockchainJob
+
+- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being installed"
+  when: forksNodeEnvironmentVariables|length == 0
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  async_status:
+    jid: "{{ installBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  delay: 15
+
+- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain (additional environment variables)"
+  when: forksNodeEnvironmentVariables|length > 0
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  shell: ./install.sh
+  args:
+    chdir: "{{ forksNodeApplicationDirectory }}"
+    executable: /bin/sh
+  environment: "{{ forkBuildRequirementsDescriptor.env }}"
+  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  poll: 0
+  register: installBlockchainJob
+
+- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being installed (additional environment variables)"
+  when: forksNodeEnvironmentVariables|length > 0
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  async_status:
+    jid: "{{ installBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  delay: 15
+
+
+- name: "Remove {{ forksNodeForkIdentifier|capitalize }} system user from sudo group"
+  become: true
+  shell: "deluser {{ forksNodeSystemUsername }} sudo"
+
+
+  ## Fix permissions
+
+- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
+  when: forksNodePermissionsFix
+  become: true
+  file:
+    path: "{{ forksNodeApplicationDirectory }}/mozilla-ca"
+    state: directory
+    recurse: yes
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: u=rwX,g=rX,o=rX
+
+- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions"
+  when: forksNodePermissionsFix
+  become: true
+  file:
+    path: "{{ forksConfigurationDirectory }}/mainnet/config/ssl"
+    state: directory
+    recurse: yes
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: u=rwX,g=,o=
+
+
+## Initialize blockchain
+
+- name: "Initialize {{ forksNodeForkIdentifier|capitalize }} blockchain"
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  shell: >
+    . {{ forksNodeApplicationDirectory }}/venv/bin/activate &&
+    {{ forksNodeExecutableName }} init
+    {% if not forksNodePermissionsFix %}--fix-ssl-permissions{% endif %}
+  args:
+    chdir: "{{ forksNodeApplicationDirectory }}"
+    executable: /bin/bash
+  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  poll: 0
+  register: initializeBlockchainJob
+
+- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being initialized"
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  async_status:
+    jid: "{{ initializeBlockchainJob.ansible_job_id }}"
+  register: asyncStatusResult
+  until: asyncStatusResult.finished
+  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  delay: 15
+
+
+#- name: "Store {{ forksNodeForkIdentifier|capitalize }} CA cert in organization product"
+#  when: "'farmer' in forksComponentService"
+#  vars:
+#    contextProductStoreAction: backup
+#    contextComponentIdentifier: "{{ forksNodeForkIdentifier }}"
+#    contextProductOrganization: "{{ forksVendorIdentifier }}"
+#    contextProductLabel: "ca_cert-{{ ansible_host }}-{{ forksNodeForkIdentifier }}"
+#    contextProductDirectory: "{{ forksConfigurationDirectory }}/mainnet/config/ssl/ca"
+#  include_tasks: productStore.yml
+#  tags: certificates
+
+- name: "Generate {{ forksNodeForkIdentifier|capitalize }} service file"
+  vars:
+    #HINT: This assumes only one type of service (besides harvester) being defined for that git node 
+    forksNodeService: >-
+      {{ ((forksComponentsConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | selectattr('build', 'undefined')
+      + forksComponentsConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | selectattr('build', 'defined')
+      | selectattr('build', 'equalto', 'git'))
+      | rejectattr('service', 'equalto', 'harvester')
+      | map(attribute='service') | unique)[0] }}
+    forksNodeIsHarvester: >-
+      {{ (forksComponentsConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | selectattr('build', 'undefined')
+      + forksComponentsConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | selectattr('build', 'defined')
+      | selectattr('build', 'equalto', 'git'))
+      | selectattr('service', 'equalto', 'harvester')
+      | length > 0 }}
+  become: true
+  template:
+    src: "fork-git.service.j2"
+    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeServiceName }}.service"
+    force: true
+    owner: root
+    group: root
+    mode: 0644
+
+
+#- name: Link {{ forksNodeForkIdentifier|capitalize }} blockchain directory in Forktools root directory
+#  become: true
+#  file:
+#    src: "{{ forksNodeApplicationDirectory }}"
+#    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/lib/fork.blockchain.root/{{ forksNodeApplicationDirectory|basename }}"
+#    state: link
+#  tags: utilities
+
+#- name: Link {{ forksNodeForkIdentifier|capitalize }} configuration directory in Forktools root directory
+#  become: true
+#  file:
+#    src: "{{ forksConfigurationDirectory }}"
+#    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/lib/fork.config.root/{{ forksConfigurationDirectory|basename }}"
+#    state: link
+#  tags: utilities
+
+...

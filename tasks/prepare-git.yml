@@ -1,109 +1,43 @@
 ---
 
 
-- name: "Ensure {{ forksComponentIdentifier|capitalize }} system user"
-  become: true
-  user:
-    name: "{{ forksComponentSystemUsername }}"
-    home: "{{ forksComponentHomeDirectory }}"
-    groups: sudo
-    shell: /bin/bash
-    comment: "{{ forksComponentIdentifier|capitalize }}"
-    umask: '0027'
-
-- name: Ensure remote temp dir for ansible
-  become: true
-  file:
-    path: "{{ forksComponentHomeDirectory }}/.ansible/tmp"
-    state: directory
-    owner: "{{ forksComponentSystemUsername }}"
-    group: "{{ forksComponentSystemUsername }}"
-    mode: 0700
-
-- name: Ensure .ssh directory for {{ forksComponentIdentifier|capitalize }} system user"
-  become: true
-  file:
-    path: "{{ forksComponentHomeDirectory }}/.ssh"
-    state: directory
-    owner: "{{ forksComponentSystemUsername }}"
-    group: "{{ forksComponentSystemUsername }}"
-    mode: 0700
-
-- name: "Adding SSH public keys to user {{ forksComponentSystemUsername }}"
-  when:
-    - forksPublicSshKeys is defined
-    - forksPublicSshKeys|length > 0
-  become: true
-  authorized_key:
-    user: "{{ forksComponentSystemUsername }}"
-    key: "{{ forksPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
-    exclusive: true
-
-
-- name: "Generate modified .bashrc for user {{ forksComponentSystemUsername }}"
+- name: "Generate modified .bashrc for user {{ forksNodeSystemUsername }}"
   vars:
-    contextSystemUsername: "{{ forksComponentSystemUsername }}"
-    contextHomeDirectory: "{{ forksComponentHomeDirectory }}"
+    contextSystemUsername: "{{ forksNodeSystemUsername }}"
+    contextHomeDirectory: "{{ forksNodeHomeDirectory }}"
     contextUserPaths: 
-      - "{{ forksComponentApplicationDirectory }}"
+      - "{{ forksNodeApplicationDirectory }}"
     contextNonInteractiveRules:
-      - ". {{ forksComponentApplicationDirectory }}/venv/bin/activate"
+      - ". {{ forksNodeApplicationDirectory }}/venv/bin/activate"
   include_role:
     name: maveno_de.forks_collection.forks_utilities
     tasks_from: generateBashRc.yml
 
 
-- name: "Ensure local shared directory for user {{ forksComponentSystemUsername }}"
-  become: true
-  file:
-    path: "{{ forksSharedDirectory }}"
-    state: directory
-    owner: "{{ forksComponentSystemUsername }}"
-    group: "{{ forksComponentSystemUsername }}"
-    mode: 0750
 
-- name: "Ensure local binary directory for user {{ forksComponentSystemUsername }}"
-  become: true
-  file:
-    path: "{{ forksBinaryDirectory }}"
-    state: directory
-    owner: "{{ forksComponentSystemUsername }}"
-    group: "{{ forksComponentSystemUsername }}"
-    mode: 0750
-
-- name: "Ensure local binary directory for user {{ forksComponentSystemUsername }}"
-  become: true
-  file:
-    path: "{{ forksBinaryDirectory }}"
-    state: directory
-    owner: "{{ forksComponentSystemUsername }}"
-    group: "{{ forksComponentSystemUsername }}"
-    mode: 0750
-
-
-- name: "Install additional apt packages for {{ forksComponentIdentifier|capitalize }}"
-  when: "'aptPackages' in forksComponentItem"
-  block:
-
-    - name: Switch temporarily to system python
-      set_fact: 
-        tempPythonInterpreter: >-
-          {{ ansible_python_interpreter
-          | default(forksSystemPythonInterpreter) }}
-    - set_fact: 
-        ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
-    ###
-
-    - name: "Install additional apt packages for {{ forksComponentIdentifier|capitalize }}"
-      become: true
-      apt:
-        cache_valid_time: 10800
-        name: "{{ forkBuildRequirementsDescriptor.aptPackages }}"
-
-    ###
-    - name: Switch back to framework python venv
-      set_fact: 
-        ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+# - name: "Install additional apt packages for {{ forksComponentIdentifier|capitalize }}"
+#   when: "'aptPackages' in forksComponentItem"
+#   block:
+# 
+#     - name: Switch temporarily to system python
+#       set_fact: 
+#         tempPythonInterpreter: >-
+#           {{ ansible_python_interpreter
+#           | default(forksSystemPythonInterpreter) }}
+#     - set_fact: 
+#         ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
+#     ###
+# 
+#     - name: "Install additional apt packages for {{ forksComponentIdentifier|capitalize }}"
+#       become: true
+#       apt:
+#         cache_valid_time: 10800
+#         name: "{{ forkBuildRequirementsDescriptor.aptPackages }}"
+# 
+#     ###
+#     - name: Switch back to framework python venv
+#       set_fact: 
+#         ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
 ## Backup
@@ -125,12 +59,12 @@
 #- name: Generate farmer status script
 #  when:
 #    - not forkFarmerStatusScriptCreated is defined
-#    - "'farmer' in forksComponentComponentType"
+#    - "'farmer' in forksComponentService"
 #  become: true
 #  template:
 #    src: show_farmers.sh.j2
 #    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/show_farmers.sh"
-#    force: yes
+#    force: true
 #    owner: "{{ forksManagingSystemUsername|default('root') }}"
 #    group: "{{ forksManagingSystemUsername|default('root') }}"
 #    mode: 0755
@@ -139,7 +73,7 @@
 #- name: Adding alias for showing active farmers to shell of managing user
 #  when:
 #    - not forkFarmerStatusScriptCreated is defined 
-#    - "'farmer' in forksComponentComponentType"
+#    - "'farmer' in forksComponentService"
 #  become: true
 #  lineinfile:
 #    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
@@ -149,7 +83,7 @@
 
 #- set_fact:
 #    forkFarmerStatusScriptCreated: yes
-#  when: "'farmer' in forksComponentComponentType"
+#  when: "'farmer' in forksComponentService"
 #  tags: utilities
 
 
@@ -158,7 +92,7 @@
 #- name: Generate node performance script
 #  when:
 #    - not forkNodePerformanceScriptCreated is defined 
-#    - "'fullnode' in forksComponentComponentType"
+#    - "'fullnode' in forksComponentService"
 #  become: true
 #  template:
 #    src: node_performance.py.j2
@@ -170,7 +104,7 @@
 
 #- set_fact:
 #    forkNodePerformanceScriptCreated: yes
-#  when: "'fullnode' in forksComponentComponentType"
+#  when: "'fullnode' in forksComponentService"
 #  tags: utilities
 
 

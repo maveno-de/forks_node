@@ -3,10 +3,10 @@
 [[ -f /run/{{ forksComponentIdentifier }}.backup.lock ]] && exit 0
 
 if [[ "${1}" != '--force' ]]; then
-    docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksComponentIdentifier }}-blockchain fetch
+    docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksNodeApplicationDirectoryName }} fetch
 
-    CURRENT_COMMIT=$(docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksComponentIdentifier }}-blockchain rev-parse HEAD)
-    AVAILABLE_COMMIT=$(docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksComponentIdentifier }}-blockchain rev-parse origin/latest)
+    CURRENT_COMMIT=$(docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksNodeApplicationDirectoryName }} rev-parse HEAD)
+    AVAILABLE_COMMIT=$(docker exec -it {{ forksComponentIdentifier }}-{{ forkMainNodeName }} git -C /{{ forksNodeApplicationDirectoryName }} rev-parse origin/latest)
 fi
 
 if [[ "${1}" == '--force' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" ]]; then
@@ -21,19 +21,19 @@ if [[ "${1}" == '--force' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" 
     docker build --no-cache -t {{ forksComponentIdentifier }} {{ forksVariableDirectory }}/{{ forksComponentIdentifier }}/.local/share/chia-docker/
 
 {% for forkRequirementsInstanceItem in forkBuildRequirementsDescriptor.instances %}
-{% if forksComponentComponentType == 'fullnode+wallet' %}
+{% if forksComponentService == 'fullnode+wallet' %}
     docker run --name={{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in forksSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }} --net={{ forksComponentIdentifier }}-network \
         -v {{ forksVariableDirectory }}/{{ forksComponentIdentifier }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forksComponentIdentifier }} -p {{ forkBuildRequirementsDescriptor.nodePort }}:{{ forkBuildRequirementsDescriptor.nodePort }} -e log_level=INFO{% if forkBuildRequirementsDescriptor.lightFullNode|default(true) %} -e light=true{% endif %} \
         -e keys=/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics -d {{ forksComponentIdentifier }}:latest
 {% endif %}
-{% if forksComponentComponentType == 'wallet' %}
+{% if forksComponentService == 'wallet' %}
     docker run --name={{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in forksSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }} --net={{ forksComponentIdentifier }}-network \
         -v {{ forksVariableDirectory }}/{{ forksComponentIdentifier }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}:/root/.{{ forksComponentIdentifier }} -e log_level=INFO -e wallet=true \
         -e fullnode_address={{ forksComponentIdentifier }}.{{ forkMainNodeName }} -e keys=/root/.{{ forksComponentIdentifier }}/mainnet/config/.mnemonics -d {{ forksComponentIdentifier }}:latest
 {% endif %}
-{% if forksComponentComponentType == 'harvester' %}
+{% if forksComponentService == 'harvester' %}
     docker run --name={{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }} --restart=unless-stopped {% if 'arm' in forksSystemArchitecture %}--platform=linux/arm64/v8 {% endif %}--hostname={{ forksComponentIdentifier }}.{{ forkRequirementsInstanceItem.name }} \
-        -v {{ forksComponentHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert:/root/.{{ forksComponentIdentifier }}-cacert -e log_level=INFO -e harvester=true -e ca=/root/.{{ forksComponentIdentifier }}-cacert \
+        -v {{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}-cacert:/root/.{{ forksComponentIdentifier }}-cacert -e log_level=INFO -e harvester=true -e ca=/root/.{{ forksComponentIdentifier }}-cacert \
         -e farmer_address={{ forkRequirementsInstanceItem.farmerAddress }} -e farmer_port={{ forkRequirementsInstanceItem.farmerPort }} -e keys=copy -d {{ forksComponentIdentifier }}:latest
 {% endif %}
 

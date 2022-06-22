@@ -1,23 +1,25 @@
 [Unit]
-Description="{{ forksComponentIdentifier|capitalize }} Farming Node Service"
+Description="{{ forksNodeForkIdentifier|capitalize }} Farming Node Service"
 After=network.target
 
 [Service]
 Type=forking
 RestartSec=15s
 Restart=always
-User={{ forksComponentSystemUsername }}
-Group={{ forksComponentSystemUsername }}
+User={{ forksNodeSystemUsername }}
+Group={{ forksNodeSystemUsername }}
 
-WorkingDirectory={{ forksComponentApplicationDirectory }}
-Environment=PATH={{ forksComponentApplicationDirectory }}:{{ forksComponentApplicationDirectory }}/venv/bin
+WorkingDirectory={{ forksNodeApplicationDirectory }}
+Environment=PATH={{ forksNodeApplicationDirectory }}:{{ forksNodeApplicationDirectory }}/venv/bin
 
 Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
 Environment=SSL_CERT_DIR=/etc/ssl/certs
 
-#ExecStart=/{{ forksComponentApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forksComponentIdentifier) }} run_demon
-ExecStart={{ forksComponentApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forksComponentIdentifier) }} start {{ forksStartOptionLookupTable[forksComponentComponentType] }}
-ExecStop={{ forksComponentApplicationDirectory }}/venv/bin/{{ forkBuildRequirementsDescriptor.executableName|default(forksComponentIdentifier) }} stop all -d
+#ExecStart=/{{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} run_demon
+ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeService }}
+{% if forksNodeIsHarvester %}ExecStartPost={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start harvester
+{% endif %}
+ExecStop={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} stop all -d
 
 [Install]
 WantedBy=multi-user.target

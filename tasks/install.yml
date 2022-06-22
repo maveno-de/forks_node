@@ -1,0 +1,32 @@
+---
+
+
+- name: Build Fork Git nodes
+  include_tasks: build-git.yml
+  loop: >-
+    {{ (forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git'))
+    | map(attribute='fork') | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifier
+
+
+- name: Build Fork Docker Components
+  vars:
+    forksNodeForkIdentifier: "{{ forksComponentItem.fork }}"
+  include_tasks: install-docker.yml
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'docker') }}
+  loop_control:
+    loop_var: forksComponentItem
+
+
+...
