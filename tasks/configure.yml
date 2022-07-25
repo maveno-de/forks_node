@@ -38,8 +38,10 @@
       - "{{ forkSystemUsernameItem }}"
     append: yes
   loop: >-
-    {{ (forksComponentsConfiguration|selectattr('username', 'defined')|map(attribute='username')
-    + forksComponentsConfiguration|selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
+    {{ (forksComponentsConfiguration|selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('username', 'defined')|map(attribute='username')
+    + forksComponentsConfiguration|selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
   loop_control:
     loop_var: forkSystemUsernameItem
 
