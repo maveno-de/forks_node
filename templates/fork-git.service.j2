@@ -17,7 +17,7 @@ Environment=SSL_CERT_DIR=/etc/ssl/certs
 
 #ExecStart=/{{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} run_demon
 ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeService }}
-{% if forksNodeIsHarvester %}ExecStartPost={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start harvester
+{% if forksNodeIsAlsoHarvester %}ExecStartPost={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start harvester
 {% endif %}
 ExecStop={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} stop all -d
 

@@ -154,8 +154,7 @@
 
 - name: "Generate {{ forksNodeForkIdentifier|capitalize }} service file"
   vars:
-    #HINT: This assumes only one type of service (besides harvester) being defined for that git node 
-    forksNodeService: >-
+    forksNodeServices: >-
       {{ ((forksComponentsConfiguration
       | selectattr('host', 'equalto', inventory_hostname)
       | selectattr('build', 'undefined')
@@ -163,21 +162,20 @@
       | selectattr('host', 'equalto', inventory_hostname)
       | selectattr('build', 'defined')
       | selectattr('build', 'equalto', 'git'))
-      | rejectattr('service', 'equalto', 'harvester')
-      | map(attribute='service') | unique)[0] }}
-    forksNodeIsHarvester: >-
-      {{ (forksComponentsConfiguration
-      | selectattr('host', 'equalto', inventory_hostname)
-      | selectattr('build', 'undefined')
-      + forksComponentsConfiguration
-      | selectattr('host', 'equalto', inventory_hostname)
-      | selectattr('build', 'defined')
-      | selectattr('build', 'equalto', 'git'))
-      | selectattr('service', 'equalto', 'harvester')
-      | length > 0 }}
+      | map(attribute='service') | unique) }}
+    #HINT: This assumes only one type of service (besides harvester) being defined for that git node
+    forksNodeService: >-
+      {{ (forksNodeServices|length == 1)
+      | ternary (forksNodeServices.0.service,
+      forksNodeServices|rejectattr('service', 'equalto', 'harvester')
+      | map(attribute='service')[0]) }}
+    forksNodeIsAlsoHarvester: >-
+      {{ forksNodeServices|length > 1
+      and forksNodeServices
+      | selectattr('service', 'equalto', 'harvester') | length > 0 }}
   become: true
   template:
-    src: "fork-git.service.j2"
+    src: fork-git.service.j2
     dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeServiceName }}.service"
     force: true
     owner: root

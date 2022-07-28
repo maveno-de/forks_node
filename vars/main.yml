@@ -17,7 +17,6 @@ forksConfigurationDirectory: >-
   {{ forksNodeHomeDirectory }}/{{ ('config' in forksComponentItem)
   | ternary(forksComponentItem.config, '.'+forksNodeForkIdentifier) }}
 
-
 forksNodeSystemUsername: >-
   {{ (forksParameters is defined
   and forksNodeForkIdentifier in forksParameters
@@ -79,7 +78,6 @@ forksNodeEnvironmentVariables: >-
   and 'environmentVariables' in forksParameters[forksNodeForkIdentifier])
   | ternary(forksParameters[forksNodeForkIdentifier]['environmentVariables'], []) }}
 
-
 forksArchitectureLookupTable:
   arm64: arm64
   armhf: arm64
@@ -118,7 +116,6 @@ forksPortLookupTable:
     node: 38444
     nodeRpc: 38554
     farmer: 38441
-
 
 forksPublishedPortsLookupTable:
   all:
