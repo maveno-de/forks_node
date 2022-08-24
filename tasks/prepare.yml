@@ -14,7 +14,7 @@
 
   #HINT: Stopping all running services to prevent timeouts
   # when building due to cpu time consumption
-- name: Stop Chia fork services
+- name: Stop Forks services
   vars:
     baremetalComponents: >-
      {{ (forksComponentsConfiguration
@@ -138,11 +138,10 @@
 - name: Prepare Fork nodes
   include_tasks: prepare-node.yml
   loop: >-
-    {{ forksComponentsConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | map(attribute='fork') | unique }}
+    {{ forksComponentsConfiguration }}
   loop_control:
-    loop_var: forksNodeForkIdentifier
+    loop_var: forksComponentItem
+
 
 - name: Prepare Fork Git nodes
   include_tasks: prepare-git.yml
@@ -153,10 +152,11 @@
     + forksComponentsConfiguration
     | selectattr('host', 'equalto', inventory_hostname)
     | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git'))
-    | map(attribute='fork') | unique }}
+    | selectattr('build', 'equalto', 'git')) }}
+  #| map(attribute='fork') | unique }}
   loop_control:
-    loop_var: forksNodeForkIdentifier
+    loop_var: forksComponentItem
+
 
 - name: Prepare Fork Docker nodes
   include_tasks: prepare-docker.yml
@@ -164,10 +164,10 @@
     {{ forksComponentsConfiguration
     | selectattr('host', 'equalto', inventory_hostname)
     | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'docker')
-    | map(attribute='fork') | unique }}
+    | selectattr('build', 'equalto', 'docker') }}
+  #| map(attribute='fork') | unique }}
   loop_control:
-    loop_var: forksNodeForkIdentifier
+    loop_var: forksComponentItem
 
 
 ...

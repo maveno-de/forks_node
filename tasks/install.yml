@@ -10,15 +10,14 @@
     + forksComponentsConfiguration
     | selectattr('host', 'equalto', inventory_hostname)
     | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git'))
-    | map(attribute='fork') | unique }}
+    | selectattr('build', 'equalto', 'git')) }}
   loop_control:
-    loop_var: forksNodeForkIdentifier
+    loop_var: forksComponentItem
 
 
 - name: Build Fork Docker Components
-  vars:
-    forksNodeForkIdentifier: "{{ forksComponentItem.fork }}"
+  #vars:
+  #  forksNodeForkIdentifier: "{{ forksComponentItem.fork }}"
   include_tasks: install-docker.yml
   loop: >-
     {{ forksComponentsConfiguration

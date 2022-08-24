@@ -10,10 +10,9 @@
     + forksComponentsConfiguration
     | selectattr('host', 'equalto', inventory_hostname)
     | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git'))
-    | map(attribute='fork') | unique }}
+    | selectattr('build', 'equalto', 'git')) }}
   loop_control:
-    loop_var: forksNodeForkIdentifier
+    loop_var: forksComponentItem
 
 - name: Configure Fork Docker Components
   vars:
@@ -41,7 +40,7 @@
     {{ (forksComponentsConfiguration|selectattr('host', 'equalto', inventory_hostname)
     | selectattr('username', 'defined')|map(attribute='username')
     + forksComponentsConfiguration|selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('username', 'undefined')|map(attribute='fork'))|unique }}
+    | selectattr('username', 'undefined')|map(attribute='identifier'))|unique }}
   loop_control:
     loop_var: forkSystemUsernameItem
 

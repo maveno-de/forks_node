@@ -1,8 +1,14 @@
 ---
 
 
+# Components
+
 forksComponentIdentifier: >-
   {{ forksComponentItem.identifier }}
+
+forksNodeForkIdentifier: >-
+  {{ forksComponentItem.fork }}
+
 
 forksComponentService: >-
   {{ ('component' in forksComponentItem)
@@ -17,17 +23,35 @@ forksConfigurationDirectory: >-
   {{ forksNodeHomeDirectory }}/{{ ('config' in forksComponentItem)
   | ternary(forksComponentItem.config, '.'+forksNodeForkIdentifier) }}
 
+#forksNodeSystemUsername: >-
+#  {{ (forksParameters is defined
+#  and forksNodeForkIdentifier in forksParameters
+#  and 'systemUsername' in forksParameters[forksNodeForkIdentifier])
+#  | ternary(forksParameters[forksNodeForkIdentifier]['systemUsername'], forksNodeForkIdentifier) }}
+
+#forksNodeHomeDirectory: >-
+#  {{ (forksParameters is defined
+#  and forksNodeForkIdentifier in forksParameters
+#  and 'homeDirectory' in forksParameters[forksNodeForkIdentifier])
+#  | ternary(forksParameters[forksNodeForkIdentifier]['homeDirectory'], 
+#  forksUserRootDirectory + '/' + forksNodeSystemUsername) }}
+
 forksNodeSystemUsername: >-
-  {{ (forksParameters is defined
-  and forksNodeForkIdentifier in forksParameters
-  and 'systemUsername' in forksParameters[forksNodeForkIdentifier])
-  | ternary(forksParameters[forksNodeForkIdentifier]['systemUsername'], forksNodeForkIdentifier) }}
+  {{ ('username' in forksComponentItem)
+  |ternary(forksComponentItem['username'],
+  forksComponentItem['identifier']) }}
+
 forksNodeHomeDirectory: >-
-  {{ (forksParameters is defined
-  and forksNodeForkIdentifier in forksParameters
-  and 'homeDirectory' in forksParameters[forksNodeForkIdentifier])
-  | ternary(forksParameters[forksNodeForkIdentifier]['homeDirectory'], 
+  {{ ('home' in forksComponentItem)
+  |ternary(forksComponentItem['username'],
   forksUserRootDirectory + '/' + forksNodeSystemUsername) }}
+
+forksNodeServiceName: >-
+  {{ ('serviceName' in forksComponentItem)
+  |ternary(forksComponentItem['serviceName'],
+  forksComponentItem['identifier']) }}
+
+# Params
 
 forksNodeRepositoryIdentifier: >-
   {{ forksRepositoryIdentifierLookupTable[forksNodeForkIdentifier] }}
@@ -42,11 +66,6 @@ forksNodeSharedDirectory: >-
 forksNodeApplicationDirectory: >-
   {{ forksNodeSharedDirectory }}/{{ forksNodeApplicationDirectoryName }}
 
-forksNodeServiceName: >-
-  {{ (forksParameters is defined
-  and forksNodeForkIdentifier in forksParameters
-  and 'serviceName' in forksParameters[forksNodeForkIdentifier])
-  | ternary(forksParameters[forksNodeForkIdentifier]['serviceName'], forksNodeForkIdentifier) }}
 forksNodeEnabled: >-
   {{ (forksParameters is defined
   and forksNodeForkIdentifier in forksParameters

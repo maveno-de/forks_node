@@ -8,7 +8,7 @@
     state: absent
 
 
-- name: "Clone {{ forksNodeForkIdentifier|capitalize }} blockchain repository into source directory"
+- name: "Clone {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} repository into source directory"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   git:
@@ -36,7 +36,7 @@
     append: true
 
 
-- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain"
+- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }}"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -48,7 +48,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being installed"
+- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} being installed"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -59,7 +59,7 @@
   retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
   delay: 15
 
-- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain (additional environment variables)"
+- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -72,7 +72,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being installed (additional environment variables)"
+- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} being installed (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -166,13 +166,12 @@
     #HINT: This assumes only one type of service (besides harvester) being defined for that git node
     forksNodeService: >-
       {{ (forksNodeServices|length == 1)
-      | ternary (forksNodeServices.0.service,
-      forksNodeServices|rejectattr('service', 'equalto', 'harvester')
-      | map(attribute='service')[0]) }}
+      | ternary (forksNodeServices.0,
+      (forksNodeServices|reject('equalto', 'harvester'))[0]) }}
     forksNodeIsAlsoHarvester: >-
       {{ forksNodeServices|length > 1
       and forksNodeServices
-      | selectattr('service', 'equalto', 'harvester') | length > 0 }}
+      | select('equalto', 'harvester') | length > 0 }}
   become: true
   template:
     src: fork-git.service.j2
