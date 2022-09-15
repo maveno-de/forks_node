@@ -26,6 +26,41 @@ Hardware suitable to run nodes are servers along with common PC or laptops as we
 
 The following examples provide insight on configuration and usage of the role.
 
+
+### Start Options to started services
+
+
+|                   | Full Node | Wallet | Farmer | Harvester | Timelord | Timelord Launcher | Introducer | Full Node Simulator |
+| :---              | :----:    | :----: | :----: | :----:    | :----:   | :----:            | :----:     | :----:              |
+| all	              |     X     |    X   |    X   |  X        |        X |    X              |            |                     |
+| node              |   X       |        |        |           |          |                   |            |                     |
+| harvester         |           |        |        |      X    |          |                   |            |                     |
+| farmer            |   X       |  X     |    X   |     X     |          |                   |            |                     |
+| farmer-no-wallet  |    X      |        |   X    |   X       |          |                   |            |                     |
+| farmer-only       |           |        |   X    |           |          |                   |            |                     |
+| timelord          |   X       |        |        |           |        X |                X  |            |                     |
+| timelord-only     |           |        |        |           | X        |                   |            |                     |
+| timelord-launcher |           |        |        |           |          |               X   |            |                     |
+| wallet            |   X       |   X    |        |           |          |                   |            |                     |
+| wallet-only       |           |  X     |        |           |          |                   |            |                     |
+| introducer        |           |        |        |           |          |                   |    X       |                     |
+| simulator         |           |        |        |           |          |                   |            | X                   |
+
+
+Erster Service -> ExecStart
+Folgende Services -> ExecStartPost
+
+config: combine into active config
+
+Ausgehende Firewall kann nicht geschlossen werden?
+
+Verbrauch Farmer ~ 150MB
+
+Verbrauch Wallet ~ 400MB
+
+
+
+
 ### Example inventory file
 
 ```yaml

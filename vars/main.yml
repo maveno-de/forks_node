@@ -51,6 +51,11 @@ forksNodeServiceName: >-
   |ternary(forksComponentItem['serviceName'],
   forksComponentItem['identifier']) }}
 
+forksNodeServices: >-
+  {{ ('services' in forksComponentItem)
+  | ternary(forksComponentItem['services'],
+  ['node'] ) }}
+
 # Params
 
 forksNodeRepositoryIdentifier: >-
@@ -115,6 +120,7 @@ forksLogAnalyzerArchitectureLookupTable:
 forksRepositoryIdentifierLookupTable:
   chia: Chia-Network/chia-blockchain
   chives: HiveProject2021/chives-blockchain
+  hddcoin: HDDcoin-Network/hddcoin-blockchain
   silicoin: zcomputerwiz/silicoin-blockchain
   ecostake: Ecostake-Network/ecostake-blockchain
 
@@ -127,6 +133,10 @@ forksPortLookupTable:
     node: 9699
     nodeRpc: 9755
     farmer: 9647
+  hddcoin:
+    node: 28444
+    nodeRpc: 28555
+    farmer: 28447
   silicoin:
     node: 22222
     nodeRpc: 22555

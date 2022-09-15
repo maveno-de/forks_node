@@ -15,10 +15,11 @@ Environment=PATH={{ forksNodeApplicationDirectory }}:{{ forksNodeApplicationDire
 Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
 Environment=SSL_CERT_DIR=/etc/ssl/certs
 
-#ExecStart=/{{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} run_demon
-ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeService }}
-{% if forksNodeIsAlsoHarvester %}ExecStartPost={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start harvester
-{% endif %}
+ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeServices.0 }}
+{% if forksNodeServices|length > 1 %}{% for nodeService in forksNodeServices %}ExecStartPost={{
+forksNodeApplicationDirectory }}/venv/bin/{{
+forksNodeExecutableName }} start {{ nodeService }}
+{% endfor %}{% endif %}
 ExecStop={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} stop all -d
 
 [Install]
