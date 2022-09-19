@@ -136,6 +136,7 @@
   ## Node specific
 
 - name: Prepare Fork nodes
+  when: forksComponentItem.host == inventory_hostname
   include_tasks: prepare-node.yml
   loop: >-
     {{ forksComponentsConfiguration }}
@@ -144,6 +145,7 @@
 
 
 - name: Prepare Fork Git nodes
+  when: forksComponentItem.host == inventory_hostname
   include_tasks: prepare-git.yml
   loop: >-
     {{ (forksComponentsConfiguration
@@ -159,6 +161,7 @@
 
 
 - name: Prepare Fork Docker nodes
+  when: forksComponentItem.host == inventory_hostname
   include_tasks: prepare-docker.yml
   loop: >-
     {{ forksComponentsConfiguration

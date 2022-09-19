@@ -107,7 +107,7 @@
 
 - name: "Remove {{ forksNodeForkIdentifier|capitalize }} system user from sudo group"
   become: true
-  shell: "deluser {{ forksNodeSystemUsername }} sudo"
+  command: "deluser {{ forksNodeSystemUsername }} sudo"
 
 
   ## Fix permissions
@@ -173,35 +173,6 @@
 #  include_tasks: productStore.yml
 #  tags: certificates
 
-- name: "Generate {{ forksNodeForkIdentifier|capitalize }} service file"
-  # vars:
-  #   forksNodeServices: >-
-  #     {{ ((forksComponentsConfiguration
-  #     | selectattr('host', 'equalto', inventory_hostname)
-  #     | selectattr('build', 'undefined')
-  #     + forksComponentsConfiguration
-  #     | selectattr('host', 'equalto', inventory_hostname)
-  #     | selectattr('build', 'defined')
-  #     | selectattr('build', 'equalto', 'git'))
-  #     | map(attribute='service') | unique) }}
-  #   #HINT: This assumes only one type of service (besides harvester) being defined for that git node
-  #   forksNodeService: >-
-  #     {{ (forksNodeServices|length == 1)
-  #     | ternary (forksNodeServices.0,
-  #     (forksNodeServices|reject('equalto', 'harvester'))[0]) }}
-  #   forksNodeIsAlsoHarvester: >-
-  #     {{ forksNodeServices|length > 1
-  #     and forksNodeServices
-  #     | select('equalto', 'harvester') | length > 0 }}
-  become: true
-  template:
-    src: fork-git.service.j2
-    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeServiceName }}.service"
-    force: true
-    owner: root
-    group: root
-    mode: 0644
-
 
 #- name: Link {{ forksNodeForkIdentifier|capitalize }} blockchain directory in Forktools root directory
 #  become: true
@@ -218,5 +189,26 @@
 #    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/lib/fork.config.root/{{ forksConfigurationDirectory|basename }}"
 #    state: link
 #  tags: utilities
+
+
+  #RESULT: forksNodeReconnectTaskPatchStatResult.stat.exists
+- name: "Check if reconnect_task patch exists for {{ forksNodeForkIdentifier|capitalize }}"
+  delegate_to: localhost
+  stat:
+    path: "{{ role_path }}/files/{{ forksNodeForkIdentifier }}/reconnect_task.py"
+  register: forksNodeReconnectTaskPatchStatResult
+
+- name: "Patch {{ forksNodeForkIdentifier|capitalize }} reconnect_task.py"
+  when: forksNodeReconnectTaskPatchStatResult.stat.exists
+  become: true
+  become_user: "{{ forksNodeSystemUsername }}"
+  template:
+    src: "files/{{ forksNodeForkIdentifier }}/reconnect_task.py"
+    dest: "{{ forksNodeApplicationDirectory }}/{{ forksNodeForkIdentifier }}/server/reconnect_task.py"
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0640
+    force: true
+
 
 ...

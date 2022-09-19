@@ -20,8 +20,8 @@ forksComponentEnabled: >-
   {{ ('enabled' in forksComponentItem)
   | ternary(forksComponentItem.enabled, true) }}
 forksConfigurationDirectory: >-
-  {{ forksNodeHomeDirectory }}/{{ ('config' in forksComponentItem)
-  | ternary(forksComponentItem.config, '.'+forksNodeForkIdentifier) }}
+  {{ forksNodeHomeDirectory }}/{{ ('configDirectory' in forksComponentItem)
+  | ternary(forksComponentItem['configDirectory']|default(''), '.'+forksNodeForkIdentifier) }}
 
 #forksNodeSystemUsername: >-
 #  {{ (forksParameters is defined
@@ -38,17 +38,19 @@ forksConfigurationDirectory: >-
 
 forksNodeSystemUsername: >-
   {{ ('username' in forksComponentItem)
-  |ternary(forksComponentItem['username'],
+  | ternary(forksComponentItem['username']|default(''),
   forksComponentItem['identifier']) }}
 
 forksNodeHomeDirectory: >-
   {{ ('home' in forksComponentItem)
-  |ternary(forksComponentItem['username'],
-  forksUserRootDirectory + '/' + forksNodeSystemUsername) }}
+  | ternary(forksComponentItem['home'],
+  ('username' in forksComponentItem)
+  | ternary(forksUserRootDirectory + '/' + forksComponentItem['username'],
+  forksUserRootDirectory + '/' + forksComponentItem['identifier'] )) }}
 
 forksNodeServiceName: >-
   {{ ('serviceName' in forksComponentItem)
-  |ternary(forksComponentItem['serviceName'],
+  | ternary(forksComponentItem['serviceName'],
   forksComponentItem['identifier']) }}
 
 forksNodeServices: >-
@@ -123,6 +125,8 @@ forksRepositoryIdentifierLookupTable:
   hddcoin: HDDcoin-Network/hddcoin-blockchain
   silicoin: zcomputerwiz/silicoin-blockchain
   ecostake: Ecostake-Network/ecostake-blockchain
+  stai: STATION-I/stai-blockchain
+  flax: Flax-Network/flax-blockchain
 
 forksPortLookupTable:
   chia:
@@ -145,6 +149,14 @@ forksPortLookupTable:
     node: 38444
     nodeRpc: 38554
     farmer: 38441
+  stai:
+    node: 1999
+    nodeRpc: 1758
+    farmer: 1692
+  flax:
+    node: 6888
+    nodeRpc: 6755
+    farmer: 6885
 
 forksPublishedPortsLookupTable:
   all:

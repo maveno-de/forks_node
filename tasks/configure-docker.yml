@@ -5,7 +5,7 @@
 #   when: "'mnemonics' in forkRequirementsInstanceItem.keys()"
 #   no_log: true
 #   become: true
-#   copy:
+#   
 #     dest: "{{ forksNodeHomeDirectory }}/.{{ forksComponentIdentifier }}-{{ forkRequirementsInstanceItem.name }}/mainnet/config/.mnemonics"
 #     content: "{{ (((lookup('file', 'files/credentials/' + inventory_hostname + '.yml')|from_yaml).forks[forksComponentIdentifier].instances)|selectattr('name', 'equalto', forkRequirementsInstanceItem.name))[0].mnemonics }}"
 #     owner: "{{ forksNodeSystemUsername }}"

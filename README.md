@@ -65,224 +65,46 @@ Verbrauch Wallet ~ 400MB
 
 ```yaml
 forks:
-
+  hosts:
+    <hostname1>:
+      ansible_host: <domain name1>
+    <hostname2>:
+      ansible_host: <domain name2>
   vars:
 
-    forksVendorIdentifier: <Vendor>
-    forksComponentIdentifier: forks
+    forksComponentsConfiguration:
 
-    forksSystemCaCertificatesFilePath: /etc/ssl/certs/ca-certificates.crt
+        # stai
 
-    forksManagingLocalBinaryDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin"
+      - identifier: <node identifier 1>
+        build: git
+        host: <hostname1>
+        fork: <fork identifier1>
+        services:
+          - node
+          - harvester
+        config:
+          <config options>...
+        #username: fork1
+        #serviceName: fork1
+        #configDirectory: .fork
 
-    mavenoPrefixDirectory: "/usr/local/{{ forksVendorIdentifier }}"
-    mavenoSourceDirectory: "{{ mavenoPrefixDirectory }}/src"
-    forksLibraryDirectory: "{{ mavenoPrefixDirectory }}/lib"
-    mavenoLibrary64Directory: "{{ mavenoPrefixDirectory }}/lib64"
-    mavenoBinaryDirectory: "{{ mavenoPrefixDirectory }}/bin"
-    mavenoLibexecDirectory: "{{ mavenoPrefixDirectory }}/libexec"
-    mavenoSharedDirectory: "{{ mavenoPrefixDirectory }}/share"
-    forksSystemServiceDirectory: /etc/systemd/system
+      - identifier: <node identifier 2>
+        host: <hostname2>
+        build: git
+        fork: <fork identifier1>
+        services:
+          - farmer-only
+          - wallet
+        config:
+          farmer:
+            full_node_peer:
+              host: <hostname1>
+        certs: <node identifier 1>
+        #username: fork1
+        #serviceName: fork1
+        #configDirectory: .fork
 
-    forksVariableDirectory: /var/local/{{ forksVendorIdentifier }}/lib
-
-    forksSystemPythonInterpreter: /usr/bin/python3
-    forksVenvInterpreterPath /usr/local/{{ forksVendorIdentifier }}/share/{{ forksVendorIdentifier }}.venv/bin/python
-
-    forksPublicSshKeys:
-      - name: 'SSH public key 1'
-        sshkey: 'ssh-rsa <...> SSH public key 1'
-      - name: 'SSH public key 2'
-        sshkey: 'ssh-ed25519 <...> SSH public key 2'
-      - ...
-
-  hosts:
-
-    #NOTE: Farmer nodes must be defined before harvester nodes
-    <Hostname node1>:
-
-      forksManagingSystemUsername|default('root'): <Managing account username>
-      forksManagingHomeDirectory|default('/root'): <Managing account home directory>
-
-      forksSystemArchitecture: arm64 # amd64|arm64
-      ansible_host: <Node1 domain name>
-      forksJobTimeFactor: 4
-
-      forksBackupDataDirectory: <Blockchains local backup directory>
-      forksBackupHour: 8
-      forksBackupMinute: 0
-      forksBackupWeekday: 0 # Sunday=0, Monday=1, ...
-
-      forksBuildRequirementsDescriptor:
-
-        chia:
-          buildOption: git
-          repositoryIdentifier: Chia-Network/chia-blockchain
-          nodePort: 8444
-          farmerPort: 8447
-          startOption: fullnode+farmer
-          lightFullNode: yes
-          updateHour: 5
-          updateMinute: 0
-          backup: yes
-
-        chives:
-          buildOption: git
-          repositoryIdentifier: HiveProject2021/chives-blockchain
-          nodePort: 9699
-          #farmerPort: 9647
-          startOption: fullnode+farmer
-          lightFullNode: yes
-          permissionsFix: yes
-          updateHour: 5
-          updateMinute: 30
-          backup: yes
-
-        skynet:
-          buildOption: git
-          repositoryIdentifier: SkynetNetwork/skynet-blockchain
-          nodePort: 9999
-          #farmerPort: 9998
-          env:
-            BUILD_VDF_CLIENT: 'N' 
-            BUILD_VDF_BENCH: 'N'
-          aptPackages:
-            - libgmp3-dev
-            - libboost-all-dev
-          startOption: fullnode+farmer
-          lightFullNode: yes
-          updateHour: 7
-          updateMinute: 0
-          backup: yes
-
-        hddcoin:
-          buildOption: git
-          repositoryIdentifier: HDDcoin-Network/hddcoin-blockchain
-          alias: hdd
-          systemUsername: hdd
-          nodePort: 28444
-          #farmerPort: 28447
-          startOption: fullnode+farmer
-          lightFullNode: yes
-          updateHour: 7
-          updateMinute: 15
-          backup: yes
-
-        silicoin:
-          buildOption: git
-          repositoryIdentifier: maveno-de/silicoin-blockchain
-          branch: v1.1.3
-          alias: sit
-          executableName: sit
-          configurationDirectoryName: .sit
-          nodePort: 22222
-          farmerPort: 11447
-          startOption: fullnode+farmer
-          lightFullNode: yes
-          updateHour: 5
-          updateMinute: 45
-          backup: yes
-
-
-    <Hostname node2>:
-
-      forksManagingSystemUsername|default('root'): <Node2 managing account username>
-      forksManagingHomeDirectory|default('/root'): <Node2 managing account home directory>
-
-      forksSystemArchitecture: arm64 # amd64|arm64
-      ansible_host: <Node2 domain name>
-      forksJobTimeFactor: 4
-
-      forksBuildRequirementsDescriptor:
-
-        chia:
-          buildOption: docker
-          updateHour: 5
-          updateMinute: 0
-          instances:
-            - name: f0
-              startOption: harvester
-              farmerAddress: <Farmer domain name>
-              farmerPort: 8447
-              plotDirectories:
-                - <Plots path1>
-                - <Plots path2>
-                - ...
-
-        silicoin:
-          buildOption: docker
-          alias: sit
-          executableName: sit
-          branch: v1.1.3
-          updateHour: 5
-          updateMinute: 45
-          instances:
-            - name: f0
-              startOption: harvester
-              farmerAddress: <Farmer domain name>
-              farmerPort: 11447
-              plotDirectories:
-                - <Plots path1>
-                - <Plots path2>
-                - ...
-
-
-    <Hostname node3>:
-
-      forksManagingSystemUsername|default('root'): <Node3 managing account username>
-      forksManagingHomeDirectory|default('/root'): <Node3 managing account home directory>
-
-      forksSystemArchitecture: amd64
-      forksJobTimeFactor: 1
-
-      forksBuildRequirementsDescriptor:
-
-        chia:
-          buildOption: docker
-          nodePort: 8444
-          #nodeRpcPort: 8555
-          farmerPort: 8447
-          fullnodeName: wallet1
-          lightFullNode: yes
-          updateHour: 5
-          updateMinute: 0
-          instances:
-            - name: wallet1
-              startOption: fullnode+wallet
-            - name: wallet2
-              startOption: wallet
-
-        chives:
-          buildOption: docker
-          alias: chives
-          nodePort: 9699
-          #nodeRpcPort: 9755
-          farmerPort: 9647
-          fullnodeName: wallet1
-          lightFullNode: yes
-          updateHour: 5
-          updateMinute: 30
-          instances:
-            - name: wallet1
-              startOption: fullnode+wallet
-            - name: wallet2
-              startOption: wallet
-
-        silicoin:
-          buildOption: docker
-          alias: sit
-          nodePort: 28444
-          #nodeRpcPort: 28555
-          farmerPort: 28447
-          fullnodeName: wallet1
-          lightFullNode: yes
-          updateHour: 7
-          updateMinute: 15
-          instances:
-            - name: wallet1
-              startOption: fullnode+wallet
-            - name: wallet1
-              startOption: wallet
 
 ```
 

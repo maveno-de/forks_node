@@ -2,6 +2,7 @@
 
 
 - name: Build Fork Git nodes
+  when: forksComponentItem.host == inventory_hostname
   include_tasks: build-git.yml
   loop: >-
     {{ (forksComponentsConfiguration
@@ -16,6 +17,7 @@
 
 
 - name: Build Fork Docker Components
+  when: forksComponentItem.host == inventory_hostname
   #vars:
   #  forksNodeForkIdentifier: "{{ forksComponentItem.fork }}"
   include_tasks: install-docker.yml

@@ -1,6 +1,38 @@
 ---
 
 
+## Modify config
+
+- name: forksComponentItem
+  debug:
+    msg: "{{ forksComponentItem }}"
+
+- name: Fetch Fork config data
+  when: "'config' in forksComponentItem.keys()"
+  become: true
+  slurp:
+    src: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+  register: configSlurpResult
+
+
+- name: Store modified Fork config data
+  when: "'config' in forksComponentItem.keys()"
+  become: true
+  vars:
+    forksNodeSystemUsername: >-
+      {{ ('username' in forksComponentItem)
+      |ternary(forksComponentItem['username'],
+      forksComponentItem['identifier']) }}
+    forkConfigurationData: "{{ configSlurpResult['content'] | b64decode | from_yaml }}"
+  copy:
+    dest: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+    content: "{{ forkConfigurationData | combine(forksComponentItem.config, recursive=True)|to_yaml }}"
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+    force: true
+
+
 # - name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"
 #   when: 
 #     - forksComponentService != 'harvester'
@@ -32,40 +64,6 @@
 #         path: "{{ forksNodeApplicationDirectory }}/.mnemonics"
 #         state: absent
 
-
-  ## Firewall
-
-# - name: "Allow {{ forksComponentIdentifier|capitalize }} node network traffic"
-#   when: 
-#     - "'nodePort' in forksComponentItem"
-#     - forksComponentService != 'harvester'
-#   become: true
-#   ufw:
-#     rule: allow
-#     port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
-#     proto: tcp
-
-   #TODO: Man kann den Port nicht schließen wenn unbekannt....
-#- name: "Deny {{ forksComponentIdentifier|capitalize }} node network traffic"
-#  when: >
-#    not 'nodePort' in forksComponentItem
-#    or forksComponentService == 'harvester'
-#  become: true
-#  ufw:
-#    rule: allow
-#    port: "{{ forkBuildRequirementsDescriptor.nodePort }}"
-#    proto: tcp
-#    delete: yes
-
-# - name: "Allow {{ forksComponentIdentifier|capitalize }} farmer network traffic"
-#   when: 
-#     - "'farmerPort' in forksComponentItem"
-#     - forksComponentService != 'harvester'
-#   become: true
-#   ufw:
-#     rule: allow
-#     port: "{{ forkBuildRequirementsDescriptor.farmerPort }}"
-#     proto: tcp
 
 
   # Cronjobs
@@ -205,17 +203,47 @@
 #  tags: utilities
 
 
-
-  #HINT: Starting Chia fork services the latest possible to prevent timeouts
-  # when building due to cpu time consumption
-- name: Start Forks services
+- name: "Generate {{ forksNodeForkIdentifier|capitalize }} service file"
   become: true
-  systemd:
-    name: "{{ forksNodeServiceName }}.service"
-    daemon-reload: yes
-    enabled: "{{ forksNodeEnabled }}"
-    state: "{{ forksNodeEnabled|ternary('restarted', 'stopped') }}"
-  changed_when: false
+  template:
+    src: fork-git.service.j2
+    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeServiceName }}.service"
+    force: true
+    owner: root
+    group: root
+    mode: 0644
+
+
+  # <- Restart Forks services 
+- name: Distribute certs
+  include_role:
+    name: maveno_de.forks.forks_utilities
+    tasks_from: distributeCertificates.yml
+
+
+  ## Firewall
+
+- name: "Allow {{ forksComponentIdentifier|capitalize }} node network traffic"
+  when: 
+    - "'services' in forksComponentItem"
+    - "'node' in forksComponentItem.services"
+  become: true
+  ufw:
+    rule: allow
+    port: "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+    proto: tcp
+
+- name: "Allow {{ forksComponentIdentifier|capitalize }} farmer network traffic"
+  when: 
+    - "'services' in forksComponentItem"
+    - >-
+      'farmer' in forksComponentItem.services
+      or 'farmer' in forksComponentItem.services
+  become: true
+  ufw:
+    rule: allow
+    port: "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+    proto: tcp
 
 
 ...
