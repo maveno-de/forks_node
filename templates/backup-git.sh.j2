@@ -62,7 +62,7 @@ backupFork() {
 {% for forksComponentItem in forksComponentsConfiguration
 | selectattr('services', 'defined')
 | selectattr('services', 'contains', 'node')
-| selectattr('fork', 'equalto', forksNodeBackupForkItem) %}
+| selectattr('fork', 'equalto', forksNodeForkIdentifier) %}
 backupFork {{ forksComponentIdentifier }} {{
 forksNodeSystemUsername }} {{
 forksConfigurationDirectory }} {{
