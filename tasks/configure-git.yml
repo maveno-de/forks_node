@@ -65,24 +65,23 @@
 #         state: absent
 
 
-
   # Cronjobs
 
-# - name: "Adds paths to CA certs to {{ forksComponentIdentifier|capitalize }} crontab"
-#   become: true
-#   cron:
-#     name: REQUESTS_CA_BUNDLE
-#     user: "{{ forksNodeSystemUsername }}"
-#     env: yes
-#     job: "{{ forksSystemCaCertificatesFilePath }}"
-# 
-# - name: "Adds certs path to {{ forksComponentIdentifier|capitalize }} crontab"
-#   become: true
-#   cron:
-#     name: SSL_CERT_DIR
-#     user: "{{ forksNodeSystemUsername }}"
-#     env: yes
-#     job: /etc/ssl/certs
+- name: "Adds paths to CA certs to {{ forksComponentIdentifier|capitalize }} crontab"
+  become: true
+  cron:
+    name: REQUESTS_CA_BUNDLE
+    user: "{{ forksNodeSystemUsername }}"
+    env: yes
+    job: "{{ forksSystemCaCertificatesFilePath }}"
+
+- name: "Adds certs path to {{ forksComponentIdentifier|capitalize }} crontab"
+  become: true
+  cron:
+    name: SSL_CERT_DIR
+    user: "{{ forksNodeSystemUsername }}"
+    env: yes
+    job: /etc/ssl/certs
 
 
   # Auto-updates
