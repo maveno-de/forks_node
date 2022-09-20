@@ -172,6 +172,37 @@
     loop_var: forksComponentItem
 
 
+- name: Ensure Forks installer directory
+  become: true
+  file:
+    path: "{{ forksInstallerDirectory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop_control:
+    loop_var: forksComponentItem
+  tags: patches
+
+- name: Ensure Forks installer subdirectories
+  become: true
+  file:
+    path: "{{ forksInstallerDirectory }}/{{ forksComponentForkItem }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksComponentForkItem
+  tags: patches
+
+
 - name: "Enumerate Forks patch files"
   delegate_to: localhost
   find:

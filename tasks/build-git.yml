@@ -3,14 +3,14 @@
 
 # Per node eines Hosts
 
-- name: "Remove {{ forksNodeForkIdentifier|capitalize }} application directory"
+- name: "Remove {{ forksNodeForkIdentifier }} application directory"
   become: true
   file: 
     path: "{{ forksNodeApplicationDirectory }}"
     state: absent
 
 
-- name: "Clone {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} repository into source directory"
+- name: "Clone {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} repository into source directory"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   git:
@@ -24,16 +24,28 @@
 
 
   #RESULT: forksNodeCustomInstallerStatResult.stat.exists
-- name: "Check if custom installer script exists for {{ forksNodeForkIdentifier|capitalize }}"
+- name: "Check if custom installer script exists for {{ forksNodeForkIdentifier }}"
   delegate_to: localhost
   stat:
     path: "{{ role_path }}/files/installer/{{ forksNodeForkIdentifier }}/install.sh"
   register: forksNodeCustomInstallerStatResult
+  tags: patches
 
-- name: "Replace {{ forksNodeForkIdentifier|capitalize }} installer script with custom version"
-  become: true
-  become_user: "{{ forksNodeSystemUsername }}"
+- name: "Copy {{ forksNodeForkIdentifier }} installer script to installer directory"
   when: forksNodeCustomInstallerStatResult.stat.exists
+  become: true
+  copy:
+    src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
+    dest: "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0750
+    force: true
+  tags: patches
+
+- name: "Replace {{ forksNodeForkIdentifier }} installer script with custom version"
+  when: forksNodeCustomInstallerStatResult.stat.exists
+  become: true
   copy:
     src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
     dest: "{{ forksNodeApplicationDirectory }}/install.sh"
@@ -41,6 +53,7 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: 0750
     force: true
+  tags: patches
 
 - name: Make installer executable
   when: not forksNodeCustomInstallerStatResult.stat.exists
@@ -48,9 +61,10 @@
   file: 
     path: "{{ forksNodeApplicationDirectory }}/install.sh"
     mode: 0750
+  tags: patches
 
 
-- name: "Add {{ forksNodeForkIdentifier|capitalize }} user to sudo group"
+- name: "Add {{ forksNodeForkIdentifier }} user to sudo group"
   become: true
   user:
     name: "{{ forksNodeSystemUsername }}"
@@ -59,7 +73,7 @@
     append: true
 
 
-- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }}"
+- name: "Install {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }}"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -71,7 +85,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} being installed"
+- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} being installed"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -82,7 +96,7 @@
   retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
   delay: 15
 
-- name: "Install {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} (additional environment variables)"
+- name: "Install {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -95,7 +109,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain for node {{ forksComponentItem.identifier }} being installed (additional environment variables)"
+- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} being installed (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -107,14 +121,14 @@
   delay: 15
 
 
-- name: "Remove {{ forksNodeForkIdentifier|capitalize }} system user from sudo group"
+- name: "Remove {{ forksNodeForkIdentifier }} system user from sudo group"
   become: true
   command: "deluser {{ forksNodeSystemUsername }} sudo"
 
 
   ## Fix permissions
 
-- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
+- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions on mozilla-ca module"
   when: forksNodePermissionsFix
   become: true
   file:
@@ -125,7 +139,7 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: u=rwX,g=rX,o=rX
 
-- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions"
+- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions"
   when: forksNodePermissionsFix
   become: true
   file:
@@ -139,7 +153,7 @@
 
 ## Initialize blockchain
 
-- name: "Initialize {{ forksNodeForkIdentifier|capitalize }} blockchain"
+- name: "Initialize {{ forksNodeForkIdentifier }} blockchain"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   shell: >
@@ -153,7 +167,7 @@
   poll: 0
   register: initializeBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier|capitalize }} blockchain being initialized"
+- name: "Wait for {{ forksNodeForkIdentifier }} blockchain being initialized"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   async_status:
@@ -164,7 +178,7 @@
   delay: 15
 
 
-#- name: "Store {{ forksNodeForkIdentifier|capitalize }} CA cert in organization product"
+#- name: "Store {{ forksNodeForkIdentifier }} CA cert in organization product"
 #  when: "'farmer' in forksComponentService"
 #  vars:
 #    contextProductStoreAction: backup
@@ -176,7 +190,7 @@
 #  tags: certificates
 
 
-#- name: Link {{ forksNodeForkIdentifier|capitalize }} blockchain directory in Forktools root directory
+#- name: Link {{ forksNodeForkIdentifier }} blockchain directory in Forktools root directory
 #  become: true
 #  file:
 #    src: "{{ forksNodeApplicationDirectory }}"
@@ -184,7 +198,7 @@
 #    state: link
 #  tags: utilities
 
-#- name: Link {{ forksNodeForkIdentifier|capitalize }} configuration directory in Forktools root directory
+#- name: Link {{ forksNodeForkIdentifier }} configuration directory in Forktools root directory
 #  become: true
 #  file:
 #    src: "{{ forksConfigurationDirectory }}"
@@ -198,7 +212,7 @@
   tags: patches
 
 
-- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
+- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions on mozilla-ca module"
   when: forksNodePermissionsFix
   become: true
   file:

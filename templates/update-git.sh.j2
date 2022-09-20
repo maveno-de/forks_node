@@ -9,6 +9,7 @@ CONFIG_DIR_NAME="{{ forksConfigurationDirectory|basename }}"
 GITHUB_REPO_IDENTIFIER='{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['repository'] }}'
 GITHUB_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO_IDENTIFIER}/releases/latest"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO_IDENTIFIER}.git"
+BRANCH={{ forksNodeDefaultBranch }}
 
 if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep Loaded: | awk '{print $4}') == 'enabled;' ]]; then
 
@@ -17,14 +18,20 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
 
         su - "${USER_NAME}" -c "cd ${APP_DIR} && git fetch 1>/dev/null 2>&1"
         CURRENT_COMMIT=$(su - "${USER_NAME}" -c "cd ${APP_DIR} && git rev-parse HEAD")
-        AVAILABLE_COMMIT=$(su - "${USER_NAME}" -c "cd ${APP_DIR} && git rev-parse origin/main")
+        AVAILABLE_COMMIT=$(su - "${USER_NAME}" -c "cd ${APP_DIR} && git rev-parse origin/$BRANCH")
     fi
 
     if  [[ "${1}" == '--force' ]] || [[ "${1}" == '--install' ]] || [[ "${CURRENT_COMMIT}" != "${AVAILABLE_COMMIT}" ]]; then
         systemctl stop "${SERVICE_NAME}"
         usermod -aG sudo "${USER_NAME}"
         rm -rf "${APP_DIR}"
-        su - "${USER_NAME}" -c "git clone -b {{ forksNodeDefaultBranch }} ${GITHUB_REPO_URL} ${APP_DIR}"
+        su - "${USER_NAME}" -c "git clone -b $BRANCH ${GITHUB_REPO_URL} ${APP_DIR}"
+
+        if [[ -f "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh" ]]; then
+          cp "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh" "$APP_DIR"
+          chown "$USER_NAME:$USER_NAME" "$APP_DIR/install.sh"
+        fi
+
         chmod 'ug+x' "${APP_DIR}/install.sh"
         su - "${USER_NAME}" -c "cd ${APP_DIR} && ./install.sh"
         deluser "${USER_NAME}" 'sudo'
@@ -36,8 +43,8 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init --fix-ssl-permissions"
 {% endif %}
 
-        if [[ -d "${{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}" ]]; then
-          cp -a "${{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}/" "$APP_DIR/"
+        if [[ -d "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}" ]]; then
+          cp -a "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}/*" "$APP_DIR"
           chown "$USER_NAME:$USER_NAME" -R "$APP_DIR"
         fi
 
