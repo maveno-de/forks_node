@@ -87,11 +87,10 @@
 
   # Auto-updates
 
-
 - name: "Generate {{ forksComponentIdentifier }} auto-update script"
   when:
-    - "'updateHour' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys()"
-    - "'updateMinute' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateHour' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateMinute' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
   become: true
   template:
     src: update-git.sh.j2
@@ -104,14 +103,14 @@
 
 - name: "Setup daily cronjob for {{ forksComponentIdentifier }} auto-update"
   when:
-    - "'updateHour' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys()"
-    - "'updateMinute' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateHour' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateMinute' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
   become: true
   cron:
     name: "{{ forksComponentIdentifier }} daily auto-update"
     user: "{{ forksManagingSystemUsername|default('root') }}"
-    hour: "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['updateHour']|string }}"
-    minute: "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['updateMinute']|string }}"
+    hour: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['updateHour']|string }}"
+    minute: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['updateMinute']|string }}"
     job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksComponentIdentifier }}.sh 1>/dev/null 2>&1"
   tags: updates
 
@@ -215,13 +214,6 @@
     mode: 0644
 
 
-  # <- Restart Forks services 
-- name: Distribute certs
-  include_role:
-    name: maveno_de.forks.forks_utilities
-    tasks_from: distributeCertificates.yml
-
-
   ## Firewall
 
 - name: "Allow {{ forksComponentIdentifier|capitalize }} node network traffic"
@@ -247,43 +239,34 @@
     proto: tcp
 
 
-#?
-- name: "Generate {{ forksNodeBackupForkItem|capitalize }} backup scripts"
-  when: forksBackupDataDirectory is defined
+- name: "Generate {{ forksNodeForkIdentifier|capitalize }} backup scripts"
+  when:
+    - forksBackupDataDirectory is defined
+    - "'node' in forksComponentItem.services"
+    - "'backupHour' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+    - "'backupMinute' in forksSettingsLookupTable[forksNodeForkIdentifier]"
   become: true
   template:
-    src: backup-forks.sh.j2
-    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeBackupForkItem }}.sh"
+    src: backup-git.sh.j2
+    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeForkIdentifier }}.sh"
     force: true
     owner: "{{ forksManagingSystemUsername|default('root') }}"
     group: "{{ forksManagingSystemUsername|default('root') }}"
     mode: 0755
-  loop: >-
-    {{ forksComponentsConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('services', 'defined')
-    | selectattr('services', 'contains', 'node')
-    | map(attribute='fork') | list }}
-  loop_control:
-    loop_var: forksNodeBackupForkItem
 
-- name: "Setup daily cronjob for {{ forksNodeBackupForkItem|capitalize }} blockchain backups"
-  when: forksBackupDataDirectory is defined
+- name: "Setup daily cronjob for {{ forksNodeForkIdentifier|capitalize }} blockchain backups"
+  when:
+    - forksBackupDataDirectory is defined
+    - "'node' in forksComponentItem.services"
+    - "'backupHour' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+    - "'backupMinute' in forksSettingsLookupTable[forksNodeForkIdentifier]"
   become: true
   cron:
-    name: "{{ forksNodeBackupForkItem|capitalize }} daily backup"
+    name: "{{ forksNodeForkIdentifier|capitalize }} daily backup"
     user: "{{ forksManagingSystemUsername|default('root') }}"
-    hour: "{{ forksDatabaseBackupTimeLookupTable[forksNodeBackupForkItem]['hour'] }}"
-    minute: "{{ forksDatabaseBackupTimeLookupTable[forksNodeBackupForkItem]['minute'] }}"
-    job: "sudo {{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeBackupForkItem }}.sh"
-  loop: >-
-    {{ forksComponentsConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('services', 'defined')
-    | selectattr('services', 'contains', 'node')
-    | map(attribute='fork') | list }}
-  loop_control:
-    loop_var: forksNodeBackupForkItem
+    hour: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['backupHour'] }}"
+    minute: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['backupMinute'] }}"
+    job: "sudo {{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeForkIdentifier }}.sh"
 
 
 ...

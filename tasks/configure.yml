@@ -31,7 +31,15 @@
 
 
   ## Commons
-  
+
+
+  # <- Restart Forks services 
+- name: Distribute certs
+  include_role:
+    name: maveno_de.forks.forks_utilities
+    tasks_from: distributeCertificates.yml
+
+
 - name: Assign Chia fork instance group to managing user
   become: true
   user:

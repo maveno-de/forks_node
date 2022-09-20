@@ -102,16 +102,13 @@ forksLogAnalyzerArchitectureLookupTable:
   armhf: arm
   arm64: arm
 
+
 forksPropertiesLookupTable:
   chia:
     repository: Chia-Network/chia-blockchain
     nodePort: 8444
     nodeRpcPort: 8555
     farmerPort: 8447
-    updateHour: 15
-    updateMinute: 0
-    backupHour: 12
-    backupMinute: 0
   chives:
     repository: HiveProject2021/chives-blockchain
     nodePort: 9699
@@ -123,18 +120,6 @@ forksPropertiesLookupTable:
     nodePort: 28444
     nodeRpcPort: 28555
     farmerPort: 28447
-    updateHour: 16
-    updateMinute: 0
-  silicoin:
-    repository: zcomputerwiz/silicoin-blockchain
-    nodePort: 22222
-    nodeRpcPort: 22555
-    farmerPort: 22447
-  ecostake:
-    repository: Ecostake-Network/ecostake-blockchain
-    nodePort: 38444
-    nodeRpcPort: 38554
-    farmerPort: 38441
   stai:
     repository: STATION-I/stai-blockchain
     nodePort: 1999
@@ -145,20 +130,17 @@ forksPropertiesLookupTable:
     nodePort: 6888
     nodeRpcPort: 6755
     farmerPort: 6885
+  ecostake:
+    repository: Ecostake-Network/ecostake-blockchain
+    nodePort: 38444
+    nodeRpcPort: 38554
+    farmerPort: 38441
+  silicoin:
+    repository: zcomputerwiz/silicoin-blockchain
+    nodePort: 22222
+    nodeRpcPort: 22555
+    farmerPort: 22447
 
-
-forksDatabaseBackupTimeLookupTable:
-  chia:
-    hour: 12
-    minute: 0
-  #chives:
-  hddcoin:
-    hour: 14
-    minute: 0
-  #silicoin:
-  #ecostake:
-  #stai:
-  #flax:
 
 forksPublishedPortsLookupTable:
   all:
