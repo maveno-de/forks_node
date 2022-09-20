@@ -22,37 +22,20 @@ forksComponentEnabled: >-
 forksConfigurationDirectory: >-
   {{ forksNodeHomeDirectory }}/{{ ('configDirectory' in forksComponentItem)
   | ternary(forksComponentItem['configDirectory']|default(''), '.'+forksNodeForkIdentifier) }}
-
-#forksNodeSystemUsername: >-
-#  {{ (forksParameters is defined
-#  and forksNodeForkIdentifier in forksParameters
-#  and 'systemUsername' in forksParameters[forksNodeForkIdentifier])
-#  | ternary(forksParameters[forksNodeForkIdentifier]['systemUsername'], forksNodeForkIdentifier) }}
-
-#forksNodeHomeDirectory: >-
-#  {{ (forksParameters is defined
-#  and forksNodeForkIdentifier in forksParameters
-#  and 'homeDirectory' in forksParameters[forksNodeForkIdentifier])
-#  | ternary(forksParameters[forksNodeForkIdentifier]['homeDirectory'], 
-#  forksUserRootDirectory + '/' + forksNodeSystemUsername) }}
-
 forksNodeSystemUsername: >-
   {{ ('username' in forksComponentItem)
   | ternary(forksComponentItem['username']|default(''),
   forksComponentItem['identifier']) }}
-
 forksNodeHomeDirectory: >-
   {{ ('home' in forksComponentItem)
   | ternary(forksComponentItem['home'],
   ('username' in forksComponentItem)
   | ternary(forksUserRootDirectory + '/' + forksComponentItem['username'],
   forksUserRootDirectory + '/' + forksComponentItem['identifier'] )) }}
-
 forksNodeServiceName: >-
   {{ ('serviceName' in forksComponentItem)
   | ternary(forksComponentItem['serviceName'],
   forksComponentItem['identifier']) }}
-
 forksNodeServices: >-
   {{ ('services' in forksComponentItem)
   | ternary(forksComponentItem['services'],
@@ -61,7 +44,7 @@ forksNodeServices: >-
 # Params
 
 forksNodeRepositoryIdentifier: >-
-  {{ forksRepositoryIdentifierLookupTable[forksNodeForkIdentifier] }}
+  {{ forksPropertiesLookupTable[forksNodeForkIdentifier]['repository'] }}
 forksNodeApplicationDirectoryName: >-
   {{ forksNodeRepositoryIdentifier
   | regex_search('[^/]+$') }}
@@ -119,61 +102,84 @@ forksLogAnalyzerArchitectureLookupTable:
   armhf: arm
   arm64: arm
 
-forksRepositoryIdentifierLookupTable:
-  chia: Chia-Network/chia-blockchain
-  chives: HiveProject2021/chives-blockchain
-  hddcoin: HDDcoin-Network/hddcoin-blockchain
-  silicoin: zcomputerwiz/silicoin-blockchain
-  ecostake: Ecostake-Network/ecostake-blockchain
-  stai: STATION-I/stai-blockchain
-  flax: Flax-Network/flax-blockchain
-
-forksPortLookupTable:
+forksPropertiesLookupTable:
   chia:
-    node: 8444
-    nodeRpc: 8555
-    farmer: 8447
+    repository: Chia-Network/chia-blockchain
+    nodePort: 8444
+    nodeRpcPort: 8555
+    farmerPort: 8447
+    updateHour: 15
+    updateMinute: 0
+    backupHour: 12
+    backupMinute: 0
   chives:
-    node: 9699
-    nodeRpc: 9755
-    farmer: 9647
+    repository: HiveProject2021/chives-blockchain
+    nodePort: 9699
+    nodeRpcPort: 9755
+    farmerPort: 9647
   hddcoin:
-    node: 28444
-    nodeRpc: 28555
-    farmer: 28447
+    repository: HDDcoin-Network/hddcoin-blockchain
+    databaseVersion: 1
+    nodePort: 28444
+    nodeRpcPort: 28555
+    farmerPort: 28447
+    updateHour: 16
+    updateMinute: 0
   silicoin:
-    node: 22222
-    nodeRpc: 22555
-    farmer: 22447
+    repository: zcomputerwiz/silicoin-blockchain
+    nodePort: 22222
+    nodeRpcPort: 22555
+    farmerPort: 22447
   ecostake:
-    node: 38444
-    nodeRpc: 38554
-    farmer: 38441
+    repository: Ecostake-Network/ecostake-blockchain
+    nodePort: 38444
+    nodeRpcPort: 38554
+    farmerPort: 38441
   stai:
-    node: 1999
-    nodeRpc: 1758
-    farmer: 1692
+    repository: STATION-I/stai-blockchain
+    nodePort: 1999
+    nodeRpcPort: 1758
+    farmerPort: 1692
   flax:
-    node: 6888
-    nodeRpc: 6755
-    farmer: 6885
+    repository: Flax-Network/flax-blockchain
+    nodePort: 6888
+    nodeRpcPort: 6755
+    farmerPort: 6885
+
+
+forksDatabaseBackupTimeLookupTable:
+  chia:
+    hour: 12
+    minute: 0
+  #chives:
+  hddcoin:
+    hour: 14
+    minute: 0
+  #silicoin:
+  #ecostake:
+  #stai:
+  #flax:
 
 forksPublishedPortsLookupTable:
   all:
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
   node:
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
   farmer:
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
   farmer-no-wallet:
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['node'] }}"
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
   farmer-only:
-    - "{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}:{{ forksPortLookupTable[forksNodeForkIdentifier]['farmer'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
   wallet: []
   wallet-only: []
+
+
+forksBackupCacheDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/cache"
+forksPatchDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/patches"
 
 
 ...

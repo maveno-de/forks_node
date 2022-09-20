@@ -3,9 +3,11 @@
 
 - name: Prepare Chia forks installation
   include_tasks: prepare.yml
+  tags: patches
 
 - name: Install Chia forks
   include_tasks: install.yml
+  tags: patches
 
 
 - name: Configure Chia forks installation
@@ -13,6 +15,7 @@
   tags:
     - utilities
     - services
+    - updates
 
 
 ...

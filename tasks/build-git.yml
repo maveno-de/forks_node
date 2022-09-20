@@ -1,6 +1,8 @@
 ---
 
 
+# Per node eines Hosts
+
 - name: "Remove {{ forksNodeForkIdentifier|capitalize }} application directory"
   become: true
   file: 
@@ -25,15 +27,15 @@
 - name: "Check if custom installer script exists for {{ forksNodeForkIdentifier|capitalize }}"
   delegate_to: localhost
   stat:
-    path: "{{ role_path }}/templates/{{ forksNodeForkIdentifier }}/install.sh"
+    path: "{{ role_path }}/files/installer/{{ forksNodeForkIdentifier }}/install.sh"
   register: forksNodeCustomInstallerStatResult
 
 - name: "Replace {{ forksNodeForkIdentifier|capitalize }} installer script with custom version"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   when: forksNodeCustomInstallerStatResult.stat.exists
-  template:
-    src: "{{ forksNodeForkIdentifier }}/install.sh"
+  copy:
+    src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
     dest: "{{ forksNodeApplicationDirectory }}/install.sh"
     owner: "{{ forksNodeSystemUsername }}"
     group: "{{ forksNodeSystemUsername }}"
@@ -191,24 +193,21 @@
 #  tags: utilities
 
 
-  #RESULT: forksNodeReconnectTaskPatchStatResult.stat.exists
-- name: "Check if reconnect_task patch exists for {{ forksNodeForkIdentifier|capitalize }}"
-  delegate_to: localhost
-  stat:
-    path: "{{ role_path }}/files/{{ forksNodeForkIdentifier }}/reconnect_task.py"
-  register: forksNodeReconnectTaskPatchStatResult
+- name: Patch Forks nodes
+  include_tasks: patch.yml
+  tags: patches
 
-- name: "Patch {{ forksNodeForkIdentifier|capitalize }} reconnect_task.py"
-  when: forksNodeReconnectTaskPatchStatResult.stat.exists
+
+- name: "Fix {{ forksNodeForkIdentifier|capitalize }} ssl permissions on mozilla-ca module"
+  when: forksNodePermissionsFix
   become: true
-  become_user: "{{ forksNodeSystemUsername }}"
-  template:
-    src: "files/{{ forksNodeForkIdentifier }}/reconnect_task.py"
-    dest: "{{ forksNodeApplicationDirectory }}/{{ forksNodeForkIdentifier }}/server/reconnect_task.py"
+  file:
+    path: "{{ forksNodeApplicationDirectory }}/mozilla-ca"
+    state: directory
+    recurse: yes
     owner: "{{ forksNodeSystemUsername }}"
     group: "{{ forksNodeSystemUsername }}"
-    mode: 0640
-    force: true
+    mode: u=rwX,g=rX,o=rX
 
 
 ...

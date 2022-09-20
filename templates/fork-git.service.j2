@@ -16,7 +16,7 @@ Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
 Environment=SSL_CERT_DIR=/etc/ssl/certs
 
 ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeServices.0 }}
-{% if forksNodeServices|length > 1 %}{% for nodeService in forksNodeServices %}ExecStartPost={{
+{% if forksNodeServices|length > 1 %}{% for nodeService in forksNodeServices|reject('search','1') | list %}ExecStartPost={{
 forksNodeApplicationDirectory }}/venv/bin/{{
 forksNodeExecutableName }} start {{ nodeService }}
 {% endfor %}{% endif %}

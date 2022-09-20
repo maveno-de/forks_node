@@ -65,6 +65,7 @@
     - bin
     - tmp
     - opt
+    - var/forks
     #- lib/fork.blockchain.root
     #- lib/fork.config.root
   loop_control:
@@ -103,34 +104,32 @@
     ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
-#- name: Enable performance enhancements for RPi4
-#  include_tasks: enhancePerformance.yml
-
-
 ## Backup
 
-# - name: Ensure backup data directory
-#   when: forksBackupDataDirectory is defined
-#   become: true
-#   file:
-#     path: "{{ forksBackupDataDirectory }}"
-#     state: directory
-#     owner: "{{ forksManagingSystemUsername|default('root') }}"
-#     group: "{{ forksManagingSystemUsername|default('root') }}"
-#     mode: 0700
-#   tags: services
+- name: Ensure backup data directory
+  when: forksBackupDataDirectory is defined
+  become: true
+  file:
+    path: "{{ forksBackupDataDirectory }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0700
 
-# - name: Generate backup script template
-#   when: forksBackupDataDirectory is defined
-#   become: true
-#   template:
-#     src: backup-forks.sh.j2
-#     dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-forks.sh"
-#     force: true
-#     owner: "{{ forksManagingSystemUsername|default('root') }}"
-#     group: "{{ forksManagingSystemUsername|default('root') }}"
-#     mode: 0755
-#   tags: services
+- name: Create fork backup data directories
+  when: forksBackupDataDirectory is defined
+  become: true
+  file:
+    path: "{{ forksBackupDataDirectory }}/{{ forksComponentForkItem }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0700
+  loop: >-
+    {{ forksComponentsConfiguration
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksComponentForkItem
 
 
   ## Node specific
@@ -171,6 +170,55 @@
   #| map(attribute='fork') | unique }}
   loop_control:
     loop_var: forksComponentItem
+
+
+- name: "Enumerate Forks patch files"
+  delegate_to: localhost
+  find:
+    path: "{{ role_path }}/files/patches/{{ forksComponentForkIdentifierItem }}"
+    recurse: true
+  register: forksNodePatchFindResult
+  loop: >-
+    {{ forksComponentsConfiguration
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksComponentForkIdentifierItem
+  tags: patches
+  run_once: true
+
+- name: Ensure Forks patch directory
+  become: true
+  file:
+    path: "{{ forksPatchDirectory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+
+- name: Ensure Forks patch subdirectories
+  when: forkPatchFileForkIdentifier in forkHostForkList
+  become: true
+  vars:
+    forkPatchFileForkIdentifier: >-
+      {{ patchFile.path
+      | relpath(role_path+'/files/patches')
+      | regex_search('^[^/]+') }}
+    forkHostForkList: >-
+      {{ forksComponentsConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | map(attribute='fork') | list | unique }}
+  file:
+    path: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') | dirname }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop: "{{ forksNodePatchFindResult.results.0.files }}"
+  loop_control:
+    loop_var: patchFile
+  tags: patches
 
 
 ...
