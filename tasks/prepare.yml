@@ -252,4 +252,12 @@
   tags: patches
 
 
+  #HINT: Can cause permissions error when using multiple usernames for forks
+- name: Remove Forks specific temp dir
+  become: true
+  file: 
+    path: /tmp/clvm_compile
+    state: absent
+
+
 ...
