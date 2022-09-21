@@ -51,6 +51,7 @@
   loop:
     - "{{ forksNodeBinaryDirectory }}"
     - "{{ forksNodeSharedDirectory }}"
+    - "{{ forksNodeTempDirectory }}"
   loop_control:
     loop_var: forkLocalDirectoryItem
 

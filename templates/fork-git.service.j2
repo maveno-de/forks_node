@@ -11,6 +11,7 @@ Group={{ forksNodeSystemUsername }}
 
 WorkingDirectory={{ forksNodeApplicationDirectory }}
 Environment=PATH={{ forksNodeApplicationDirectory }}:{{ forksNodeApplicationDirectory }}/venv/bin
+Environment=TMPDIR={{ forksNodeTempDirectory }}
 
 Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
 Environment=SSL_CERT_DIR=/etc/ssl/certs

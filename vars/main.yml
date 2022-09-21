@@ -53,6 +53,8 @@ forksNodeBinaryDirectory: >-
   {{ forksNodeHomeDirectory }}/.local/bin
 forksNodeSharedDirectory: >-
   {{ forksNodeHomeDirectory }}/.local/share
+forksNodeTempDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/tmp
 forksNodeApplicationDirectory: >-
   {{ forksNodeSharedDirectory }}/{{ forksNodeApplicationDirectoryName }}
 
