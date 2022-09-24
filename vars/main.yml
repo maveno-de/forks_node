@@ -19,9 +19,6 @@ forksComponentBuildOption: >-
 forksComponentEnabled: >-
   {{ ('enabled' in forksComponentItem)
   | ternary(forksComponentItem.enabled, true) }}
-forksConfigurationDirectory: >-
-  {{ forksNodeHomeDirectory }}/{{ ('configDirectory' in forksComponentItem)
-  | ternary(forksComponentItem['configDirectory']|default(''), '.'+forksNodeForkIdentifier) }}
 forksNodeSystemUsername: >-
   {{ ('username' in forksComponentItem)
   | ternary(forksComponentItem['username']|default(''),
@@ -64,10 +61,15 @@ forksNodeEnabled: >-
   and 'enabled' in forksParameters[forksNodeForkIdentifier])
   | ternary(forksParameters[forksNodeForkIdentifier]['enabled'], true) }}
 forksNodeExecutableName: >-
-  {{ (forksParameters is defined
-  and forksNodeForkIdentifier in forksParameters
-  and 'executableName' in forksParameters[forksNodeForkIdentifier])
-  | ternary(forksParameters[forksNodeForkIdentifier]['executableName'], forksNodeForkIdentifier) }}
+  {{ (forksPropertiesLookupTable is defined
+  and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
+  and 'executableName' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys())
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['executableName'], forksNodeForkIdentifier) }}
+forksConfigurationDirectory: >-
+  {{ forksNodeHomeDirectory }}/{{ (forksPropertiesLookupTable is defined
+  and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
+  and 'configurationDirectoryName' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys())
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['configurationDirectoryName'], forksNodeForkIdentifier) }}
 forksNodePermissionsFix: >-
   {{ (forksParameters is defined
   and forksNodeForkIdentifier in forksParameters
@@ -103,45 +105,6 @@ forksLogAnalyzerArchitectureLookupTable:
   amd64: amd64
   armhf: arm
   arm64: arm
-
-
-forksPropertiesLookupTable:
-  chia:
-    repository: Chia-Network/chia-blockchain
-    nodePort: 8444
-    nodeRpcPort: 8555
-    farmerPort: 8447
-  chives:
-    repository: HiveProject2021/chives-blockchain
-    nodePort: 9699
-    nodeRpcPort: 9755
-    farmerPort: 9647
-  hddcoin:
-    repository: HDDcoin-Network/hddcoin-blockchain
-    databaseVersion: 1
-    nodePort: 28444
-    nodeRpcPort: 28555
-    farmerPort: 28447
-  stai:
-    repository: STATION-I/stai-blockchain
-    nodePort: 1999
-    nodeRpcPort: 1758
-    farmerPort: 1692
-  flax:
-    repository: Flax-Network/flax-blockchain
-    nodePort: 6888
-    nodeRpcPort: 6755
-    farmerPort: 6885
-  ecostake:
-    repository: Ecostake-Network/ecostake-blockchain
-    nodePort: 38444
-    nodeRpcPort: 38554
-    farmerPort: 38441
-  silicoin:
-    repository: zcomputerwiz/silicoin-blockchain
-    nodePort: 22222
-    nodeRpcPort: 22555
-    farmerPort: 22447
 
 
 forksPublishedPortsLookupTable:
