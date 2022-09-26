@@ -1,18 +1,6 @@
 ---
 
 
-- name: Load Forks facts
-  include_role:
-    name: maveno_de.forks.forks_utilities
-    tasks_from: facts.yml
-    apply:
-      tags:
-        - updates
-        - patches
-  tags:
-    - updates
-    - patches
-
 - name: Ensure Forks Python virtual environment
   include_role:
     name: maveno_de.forks.forks_utilities

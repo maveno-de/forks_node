@@ -27,8 +27,8 @@ forksNodeHomeDirectory: >-
   {{ ('home' in forksComponentItem)
   | ternary(forksComponentItem['home'],
   ('username' in forksComponentItem)
-  | ternary(forksUserRootDirectory + '/' + forksComponentItem['username']|default(''),
-  forksUserRootDirectory + '/' + forksComponentItem['identifier'] )) }}
+  | ternary(forksUsersRootDirectory + '/' + forksComponentItem['username']|default(''),
+  forksUsersRootDirectory + '/' + forksComponentItem['identifier'] )) }}
 forksNodeServiceName: >-
   {{ ('serviceName' in forksComponentItem)
   | ternary(forksComponentItem['serviceName'],
