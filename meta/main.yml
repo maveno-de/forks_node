@@ -2,7 +2,7 @@ galaxy_info:
   author: Javanaut
   description: Chia Fork Node Distribution and Management
   company: Maveno
-  role_name: node
+  role_name: forks_node
   namespace: maveno_de
 
   # If the issue tracker for your role is not on github, uncomment the
@@ -44,7 +44,7 @@ galaxy_info:
 
 dependencies:
 
-  - name: maveno_de.forks.facts
-    src: refulgent@scampi.maveno.de:osgw/platform/facts.git
+  - name: maveno_de.forks.forks_facts
+    src: refulgent@scampi.maveno.de:osgw/platform/forks_facts.git
     scm: git
     version: dev

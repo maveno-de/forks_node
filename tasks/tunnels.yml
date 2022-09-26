@@ -1,0 +1,25 @@
+---
+
+
+- name: Setup Forks Tunnel
+  vars:
+    forksTunnelContextTunnelIdentifier: "{{ forksTunnelItem.target }}"
+    forksTunnelContextSourceHostname: "{{ forksComponentItem.host }}"
+    forksTunnelContextSourceSystemUsername: "{{ forksNodeSystemUsername }}"
+    forksTunnelContextSourceHomeDirectory: "{{ forksNodeHomeDirectory }}"
+    forksTunnelContextTargetHostname: >-
+      {{ (forksComponentsConfiguration
+      | selectattr('identifier', 'equalto', forksTunnelItem.target))[0]['host'] }}
+    forksTunnelContextTunnelPorts: "{{ forksTunnelItem.ports }}"
+  include_role:
+    name: maveno_de.forks.forks_tunnel
+    apply:
+      tags: tunnels
+  loop: >-
+    {{ forksComponentItem.tunnels }}
+  loop_control:
+    loop_var: forksTunnelItem
+  tags: tunnels
+
+
+...

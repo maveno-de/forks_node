@@ -259,4 +259,15 @@
     state: absent
 
 
+- name: Setup Forks Node Tunnels
+  when: forksComponentItem.host == inventory_hostname
+  include_tasks: tunnels.yml
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('tunnels', 'defined')  }}
+  loop_control:
+    loop_var: forksComponentItem
+  tags: tunnels
+
+
 ...
