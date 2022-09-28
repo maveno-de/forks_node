@@ -1,0 +1,220 @@
+---
+
+
+  ## ## ##
+  # RESULT:
+  #  - forksNodeServiceStatusResult['status']['LoadState']|default('') == 'loaded'
+  #  - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'active'
+  #  - forksNodeServiceStatusResult['status']['LoadState']|default('') == 'not-found'
+  #  - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'inactive'
+- name: "Get Forks node {{ forksComponentItem.identifier }} service status"
+  become: true
+  systemd:
+    name: "{{ forksNodeServiceName }}.service"
+  register: forksNodeServiceStatusResult
+
+- name: "Stop Forks {{ forksComponentItem.identifier }} service"
+  when:
+    - forksNodeServiceStatusResult['status']['LoadState']|default('') == 'loaded'
+    - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'active'
+  become: true
+  systemd:
+    name: "{{ forksNodeServiceName }}.service"
+    state: stopped
+
+#- name: "Let Forks {{ forksComponentItem.identifier }} service shutdown properly"
+#  pause:
+#    seconds: 4
+
+
+  #RESULT: forksNodeLogFilesFindResult.files
+- name: Find Forks {{ forksComponentItem.identifier }} log files
+  become: true
+  find:
+    paths: "{{ forksConfigurationDirectory }}/mainnet/log"
+  register: forksNodeLogFilesFindResult
+
+- name: Remove Forks {{ forksComponentItem.identifier }} log files
+  become: true
+  file:
+    path: "{{ forksNodeLogFileItem.path }}"
+    state: absent
+  loop: "{{ forksNodeLogFilesFindResult.files }}"
+  loop_control:
+    loop_var: forksNodeLogFileItem
+
+# - name: Remove Forks {{ forksComponentItem.identifier }} log files
+#   become: true
+#   command: "rm {{ forksNodeLogFileItem }}"
+#   loop: "{{ forksNodeLogFilesFindResult.files }}"
+#   loop_control:
+#     loop_var: forksNodeLogFileItem
+#   changed_when: false
+
+#- name: "Wait 2s after removing files"
+#  pause:
+#    seconds: 2
+
+- name: Unmount Forks {{ forksComponentItem.identifier }} logging directory ram disk
+  become: true
+  ansible.posix.mount:
+    path: "{{ forksConfigurationDirectory }}/mainnet/log"
+    state: unmounted
+
+- name: Ensure Forks {{ forksComponentItem.identifier }} logging directory as mount point
+  become: true
+  file:
+    path: "{{ forksConfigurationDirectory }}/mainnet/log"
+    state: directory
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+
+- name: Add Forks {{ forksComponentItem.identifier }} ramdisk for logging to fstab file
+  become: true
+  vars:
+    forksNodeLogRamdiskSize: >-
+      {{ ('node' in forksComponentItem.services)
+      | ternary('50M', '20M') }}
+  lineinfile:
+    path: /etc/fstab
+    line: >-
+      tmpfs    {{ forksConfigurationDirectory }}/mainnet/log    tmpfs    defaults,nofail,size={{
+      forksNodeLogRamdiskSize }},uid={{ forksNodeSystemUsername }},gid={{
+      forksNodeSystemUsername }},mode=0750    0    0
+    state: present
+    insertafter: EOF
+
+- name: Mount Forks {{ forksComponentItem.identifier }} ramdisk(s)
+  become: true
+  command: mount -a
+
+
+- name: "Remove logging section from Forks {{ forksComponentItem.identifier }} config"
+  become: true
+  ansible.builtin.blockinfile:
+    path: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+    marker: "# {mark} {{ forksComponentItem.identifier }} LOGGING SECTION"
+    state: absent
+
+- name: "Remove Logging related lines from Forks {{ forksComponentItem.identifier }} config"
+  become: true
+  lineinfile:
+    path: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+    regexp: >-
+      ^.*{{ forksConfigLineItem }}.*$
+    state: absent
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+  loop:
+    - 'logging:'
+    - 'log_filename:'
+    - 'log_level:'
+    - 'log_maxbytesrotation:'
+    - 'log_maxfilesrotation:'
+    - 'log_stdout:'
+    - 'log_syslog:'
+    - 'log_syslog_host:'
+    - 'log_syslog_port:'
+  loop_control:
+    loop_var: forksConfigLineItem
+  tags: logging
+
+- name: "Add logging section to Forks {{ forksComponentItem.identifier }} config"
+  become: true
+  vars:
+    forksComponentLogMaxBytesRotation: >-
+      {{ ('node' in forksComponentItem.services)
+      | ternary('16777216', '6291456') }}
+  ansible.builtin.blockinfile:
+    path: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+    insertbefore: BOF
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+    marker: "# {mark} {{ forksComponentItem.identifier }} LOGGING SECTION"
+    block: |
+      logging: &logging
+        log_filename: log/debug.log
+        log_level: INFO
+        log_maxfilesrotation: 2
+        log_maxbytesrotation: {{ forksComponentLogMaxBytesRotation }}
+        log_stdout: false
+        log_syslog: false
+        log_syslog_host: localhost
+        log_syslog_port: 514
+
+- name: "Add refs to logging section to Forks {{ forksComponentItem.identifier }} config"
+  become: true
+  lineinfile:
+    path: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
+    line: '  logging: *logging #{{ forksConfigLineItem }}'
+    insertafter: >-
+      ^{{ forksConfigLineItem }}:.*$
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+  loop:
+    - 'farmer'
+    - 'full_node'
+    - 'harvester'
+    - 'introducer'
+    - 'pool'
+    - 'timelord'
+    - 'timelord_launcher'
+    - 'ui'
+    - 'wallet'
+  loop_control:
+    loop_var: forksConfigLineItem
+  tags: logging
+
+
+  #RESULT: forksPromtailConfigFileStatResult.stat.exists
+- name: Check if Promtail Configuration is present
+  become: true
+  stat:
+    path: /etc/promtail/config.yml
+  register: forksPromtailConfigFileStatResult
+
+- name: Slurp Promtail config data
+  when:
+    - forksPromtailConfigFileStatResult.stat.exists
+  become: true
+  slurp:
+    src: /etc/promtail/config.yml
+  register: configSlurpResult
+
+- name: Store modified Promtail config data
+  when:
+    - forksPromtailConfigFileStatResult.stat.exists
+    - >-
+      forksPromtailConfigurationData.scrape_configs
+      | selectattr('job_name', 'equalto', forksComponentItem.identifier)
+      | list | length == 0
+  become: true
+  vars:
+    forksComponentIndex: >-
+      {{ lookup('ansible.utils.index_of', forksComponentsConfiguration, 'eq', forksComponentItem) }}
+    forksPromtailConfigurationData: "{{ configSlurpResult['content'] | b64decode | from_yaml }}"
+    forksPromtailConfigurationModificationData:
+      scrape_configs: >-
+        {{ forksPromtailConfigurationData['scrape_configs']
+        + [{'job_name': "{{ forksComponentItem.identifier }}",
+        'static_configs': {
+        'targets':['localhost'],
+        'labels': {
+        'job': '{{ forksComponentItem.fork }}',
+        '__path__': '{{ forksConfigurationDirectory }}/mainnet/log/debug.log',
+        'host': '{{ inventory_hostname }}',
+        'namespace': 'forks'}} }] }}
+  copy:
+    dest: /etc/promtail/config.yml
+    content: "{{ forksPromtailConfigurationData | combine(forksPromtailConfigurationModificationData, recursive=True)|to_yaml }}"
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+    force: true
+
+
+...

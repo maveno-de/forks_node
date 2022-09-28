@@ -10,7 +10,7 @@
     state: absent
 
 
-- name: "Clone {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} repository into source directory"
+- name: "Clone {{ forksNodeForkIdentifier }} blockchain for {{ forksComponentItem.identifier }} repository into source directory"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   git:
@@ -73,7 +73,7 @@
     append: true
 
 
-- name: "Install {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }}"
+- name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksComponentItem.identifier }}"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -85,7 +85,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} being installed"
+- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksComponentItem.identifier }} being installed"
   when: forksNodeEnvironmentVariables|length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -96,7 +96,7 @@
   retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
   delay: 15
 
-- name: "Install {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} (additional environment variables)"
+- name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksComponentItem.identifier }} (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -109,7 +109,7 @@
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for node {{ forksComponentItem.identifier }} being installed (additional environment variables)"
+- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksComponentItem.identifier }} being installed (additional environment variables)"
   when: forksNodeEnvironmentVariables|length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"

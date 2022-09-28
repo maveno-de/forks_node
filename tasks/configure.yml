@@ -32,15 +32,60 @@
 
   ## Commons
 
-
-  # <- Restart Forks services 
-- name: Distribute certs
-  include_role:
-    name: maveno_de.forks.forks_utilities
-    tasks_from: distributeCertificates.yml
+- name: Configure Fork node ramdisk logging
+  when: forksComponentItem.host == inventory_hostname
+  include_tasks:
+    file: logging.yml
     apply:
-      tags: patches
-  tags: patches
+      tags: logging
+  loop: >-
+    {{ forksComponentsConfiguration }}
+  loop_control:
+    loop_var: forksComponentItem
+  tags: logging
+
+
+- name: Create tempfile directory for certificates
+  delegate_to: localhost
+  tempfile:
+    state: directory
+  register: forksCertificatesTempfileResult
+  changed_when: false
+  run_once: true
+  tags: certificates
+
+- name: Distribute certs
+  when: forksComponentItem.host == inventory_hostname
+  include_tasks:
+    file: certificates.yml
+    apply:
+      tags: certificates
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('certs', 'defined') }}
+  loop_control:
+    loop_var: forksComponentItem
+  tags: certificates
+
+
+- name: Restart Forks services
+  become: true
+  systemd:
+    name: "{{ forksNodeServiceName }}.service"
+    daemon-reload: yes
+    enabled: "{{ forksNodeEnabled }}"
+    state: "{{ forksNodeEnabled|ternary('restarted', 'stopped') }}"
+  changed_when: false
+  loop: >-
+    {{ forksComponentsConfiguration
+    | selectattr('host', 'equalto', inventory_hostname) }}
+  loop_control:
+    loop_var: forksComponentItem
+  tags:
+    - patches
+    - logging
+    - certificates
 
 
 - name: Assign Chia fork instance group to managing user

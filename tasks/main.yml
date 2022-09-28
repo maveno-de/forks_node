@@ -19,6 +19,8 @@
     - services
     - updates
     - patches
+    - logging
+    - certificates
 
 
 ...

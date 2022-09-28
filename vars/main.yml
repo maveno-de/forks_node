@@ -5,7 +5,8 @@
 
 forksComponentIdentifier: >-
   {{ forksComponentItem.identifier }}
-
+forksComponentHost: >-
+  {{ forksComponentItem.host }}
 forksNodeForkIdentifier: >-
   {{ forksComponentItem.fork }}
 
@@ -69,7 +70,7 @@ forksConfigurationDirectory: >-
   {{ forksNodeHomeDirectory }}/{{ (forksPropertiesLookupTable is defined
   and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
   and 'configurationDirectoryName' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys())
-  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['configurationDirectoryName'], forksNodeForkIdentifier) }}
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['configurationDirectoryName'], '.'+forksNodeForkIdentifier) }}
 forksNodePermissionsFix: >-
   {{ (forksParameters is defined
   and forksNodeForkIdentifier in forksParameters
@@ -128,6 +129,8 @@ forksPublishedPortsLookupTable:
 forksBackupCacheDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/cache"
 forksPatchDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/patches"
 forksInstallerDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/installer"
+
+forksNodeSyslogFirstPort: 1515
 
 
 ...
