@@ -4,19 +4,21 @@
 - name: Create certificate temporary subdirectories
   delegate_to: localhost
   file:
-    path: "{{ forksCertificatesTempfileResult.path }}/{{ forksComponentIdentifier }}"
+    path: "{{ forksCertificatesTempfileResult.path }}/{{ forksComponentItem.certs }}"
     state: directory
     mode: 0700
   run_once: true
 
-
 - name: Find certificate files
+  when: sourceComponentHostname in hostvars.keys()
   become: true
   delegate_to: "{{ sourceComponent.host }}"
   vars:
     sourceComponent: >-
       {{ (forksComponentsConfiguration
-      | selectattr('identifier', 'equalto', forksComponentIdentifier))[0] }}
+      | selectattr('identifier', 'equalto', forksComponentItem.certs))[0] }}
+    sourceComponentHostname: >-
+      {{ sourceComponent.host }}
     sourceComponentForkIdentifier: >-
       {{ sourceComponent.fork }}
     sourceComponentSystemUsername: >-
@@ -26,8 +28,10 @@
       {{ ('home' in sourceComponent)
       | ternary(sourceComponent['home']|default(''),
       ('username' in sourceComponent)
-      | ternary(forksUsersRootDirectory + '/' + sourceComponent['username']|default(''),
-      forksUsersRootDirectory + '/' + sourceComponent.identifier )) }}
+      | ternary(hostvars[sourceComponentHostname]['forksUsersRootDirectory']|default('')
+      + '/' + sourceComponent['username']|default(''),
+      hostvars[sourceComponentHostname]['forksUsersRootDirectory']|default('')
+      + '/' + sourceComponent.identifier )) }}
     sourceConfigurationDirectory: >-
       {{ sourceComponentHomeDirectory }}/{{ (forksPropertiesLookupTable is defined
       and sourceComponentForkIdentifier in forksPropertiesLookupTable.keys()
@@ -45,9 +49,14 @@
 - name: Fetch certificate files
   when: not forksCertificateFileFindResult is skipped
   become: true
+  delegate_to: "{{ sourceComponent.host }}"
+  vars:
+    sourceComponent: >-
+      {{ (forksComponentsConfiguration
+      | selectattr('identifier', 'equalto', forksComponentItem.certs))[0] }}
   fetch:
     src: "{{ forksCertificateFileItem.path }}"
-    dest: "{{ forksCertificatesTempfileResult.path }}/"
+    dest: "{{ forksCertificatesTempfileResult.path }}/{{ forksComponentItem.certs }}/"
     flat: true
   loop: "{{ forksCertificateFileFindResult.files }}"
   loop_control:
@@ -57,7 +66,7 @@
   delegate_to: localhost
   become: true
   find:
-    paths: "{{ forksCertificatesTempfileResult.path }}"
+    paths: "{{ forksCertificatesTempfileResult.path }}/{{ forksComponentItem.certs }}"
     recurse: true
   register: fetchedCertFileFindResult
   run_once: true

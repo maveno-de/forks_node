@@ -55,7 +55,6 @@
   tags: certificates
 
 - name: Distribute certs
-  when: forksComponentItem.host == inventory_hostname
   include_tasks:
     file: certificates.yml
     apply:
