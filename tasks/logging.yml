@@ -197,17 +197,17 @@
     forksComponentIndex: >-
       {{ lookup('ansible.utils.index_of', forksComponentsConfiguration, 'eq', forksComponentItem) }}
     forksPromtailConfigurationData: "{{ configSlurpResult['content'] | b64decode | from_yaml }}"
+    forksPromtailNodeScrapeConfig: >-
+      {'job_name': "{{ forksComponentItem.identifier }}",
+      'static_configs': [{'targets': ['localhost'],
+      'labels': {'job': "{{ forksComponentItem.fork }}",
+      '__path__': "{{ forksConfigurationDirectory }}/mainnet/log/debug.log",
+      'host': "{{ inventory_hostname }}",
+      'namespace': 'forks' } }]}
     forksPromtailConfigurationModificationData:
       scrape_configs: >-
-        {{ forksPromtailConfigurationData['scrape_configs']
-        + [{'job_name': "{{ forksComponentItem.identifier }}",
-        'static_configs': {
-        'targets':['localhost'],
-        'labels': {
-        'job': '{{ forksComponentItem.fork }}',
-        '__path__': '{{ forksConfigurationDirectory }}/mainnet/log/debug.log',
-        'host': '{{ inventory_hostname }}',
-        'namespace': 'forks'}} }] }}
+        {{ forksPromtailConfigurationData.scrape_configs
+        + [forksPromtailNodeScrapeConfig] }}
   copy:
     dest: /etc/promtail/config.yml
     content: "{{ forksPromtailConfigurationData | combine(forksPromtailConfigurationModificationData, recursive=True)|to_yaml }}"
@@ -215,6 +215,15 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: 0750
     force: true
+
+
+- name: "Add Promtail to {{ forksComponentItem.identifier }} group"
+  become: true
+  user:
+    name: promtail
+    groups:
+      - "{{ forksNodeSystemUsername }}"
+    append: true
 
 
 ...
