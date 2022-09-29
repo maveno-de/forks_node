@@ -69,7 +69,7 @@
     #- lib/fork.config.root
   loop_control:
     loop_var: forksLocalDirectoryItem
-  tags: [utilities, services]
+  tags: utilities
 
   
 #- name: Install Chia Loganalyzer executable
