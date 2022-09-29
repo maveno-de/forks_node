@@ -1,0 +1,20 @@
+---
+
+
+- name: Build Fork Git nodes
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks: build-git.yml
+  loop: >-
+    {{ (forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git')) }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags: patches
+
+
+...

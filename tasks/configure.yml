@@ -1,0 +1,98 @@
+---
+
+
+- name: Configure Fork Git nodes
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks: configure-git.yml
+  loop: >-
+    {{ (forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git')) }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags:
+    - config
+    - updates
+    - aliases
+    - backups
+
+
+  ## Commons
+
+- name: Configure Fork node ramdisk logging
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks:
+    file: logging.yml
+    apply:
+      tags: logging
+  loop: >-
+    {{ forksNodesConfiguration }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags: logging
+
+
+- name: Create tempfile directory for certificates
+  delegate_to: localhost
+  tempfile:
+    state: directory
+  register: forksCertificatesTempfileResult
+  changed_when: false
+  run_once: true
+  tags: certificates
+
+- name: Distribute certs
+  include_tasks:
+    file: certificates.yml
+    apply:
+      tags: certificates
+  loop: >-
+    {{ forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('certs', 'defined') }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags: certificates
+
+
+- name: Restart Forks services
+  become: true
+  systemd:
+    name: "{{ forksNodeServiceName }}.service"
+    daemon-reload: yes
+    enabled: "{{ forksNodeEnabled }}"
+    state: "{{ forksNodeEnabled|ternary('restarted', 'stopped') }}"
+  changed_when: false
+  loop: >-
+    {{ forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname) }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags:
+    - config
+    - patches
+    - logging
+    - certificates
+
+
+- name: Assign Chia fork instance group to managing user
+  become: true
+  user:
+    name: "{{ forksManagingSystemUsername|default('root') }}"
+    groups: 
+      - "{{ forkSystemUsernameItem }}"
+    append: yes
+  loop: >-
+    {{ (forksNodesConfiguration|selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('username', 'defined')|map(attribute='username')
+    + forksNodesConfiguration|selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('username', 'undefined')|map(attribute='identifier'))|unique }}
+  loop_control:
+    loop_var: forkSystemUsernameItem
+
+
+...

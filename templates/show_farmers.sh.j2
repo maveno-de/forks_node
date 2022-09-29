@@ -1,0 +1,30 @@
+#!/bin/bash
+
+TEXT_RED='\033[0;31m'
+TEXT_GREEN='\033[0;32m'
+TEXT_BLUE='\033[0;34m'
+TEXT_WHITE='\033[0m'
+
+showFarmer() {
+    
+    farmerStatus=$(systemctl status "${1}" | grep Loaded: | awk '{print $4}' | tr -d ';')
+
+    if [[ "${farmerStatus}" == 'enabled' ]]; then
+        farmerStatus=$(systemctl status "${1}" | grep Active: | awk '{print $2}')
+    fi
+
+    if [[ "${farmerStatus}" == 'active' ]]; then
+        printf "Farmer ${1}: $TEXT_GREEN${farmerStatus}$TEXT_WHITE\n"
+    fi
+    if [[ "${farmerStatus}" == 'disabled' ]]; then
+        printf "Farmer ${1}: $TEXT_BLUE${farmerStatus}$TEXT_WHITE\n"
+    fi
+    if [[ "${farmerStatus}" == 'inactive' ]]; then
+        printf "Farmer ${1}: $TEXT_RED${farmerStatus}$TEXT_WHITE\n"
+    fi
+}
+
+#showFarmer <Farmer Service Name>
+# ...
+
+

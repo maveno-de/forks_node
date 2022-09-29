@@ -1,0 +1,17 @@
+---
+
+
+- name: "Generate modified .bashrc for user {{ forksNodeSystemUsername }}"
+  vars:
+    contextSystemUsername: "{{ forksNodeSystemUsername }}"
+    contextHomeDirectory: "{{ forksNodeHomeDirectory }}"
+    contextUserPaths: 
+      - "{{ forksNodeApplicationDirectory }}"
+    contextNonInteractiveRules:
+      - ". {{ forksNodeApplicationDirectory }}/venv/bin/activate"
+  include_role:
+    name: maveno_de.forks.utilities
+    tasks_from: generateBashRc.yml
+
+
+...

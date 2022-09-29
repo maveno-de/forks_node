@@ -1,0 +1,71 @@
+#!/bin/bash
+
+BACKUP_DIRECTORY={{ forksBackupDataDirectory }}
+CACHE_DIRECTORY={{ forksBackupCacheDirectory }}
+
+TEXT_RED='\033[0;31m'
+TEXT_GREEN='\033[0;32m'
+TEXT_BLUE='\033[0;34m'
+TEXT_WHITE='\033[0m'
+
+# $1 fork identifier
+# $2 username
+# $3 config dirname
+# $4 rpc port
+# $5 db version
+#
+backupFork() {
+
+    BLOCKCHAIN_STATE=$(su - $2 -c "curl -qq --insecure --cert ~/$3/mainnet/config/ssl/full_node/private_full_node.crt --key ~/$3/mainnet/config/ssl/full_node/private_full_node.key -d '{}' -H \"Content-Type: application/json\" -X POST https://localhost:$4/get_blockchain_state 2>/dev/null")
+
+    BLOCKCHAIN_HEIGHT=$(echo $BLOCKCHAIN_STATE | jq .blockchain_state.peak.height)
+    BLOCKCHAIN_IS_SYNC=$(echo $BLOCKCHAIN_STATE | jq .blockchain_state.sync.synced)
+
+    if [[ $BLOCKCHAIN_IS_SYNC != 'true' ]]; then
+      >&2 printf "$1 blockchain is not synced"
+      return
+    fi
+
+    if [[ -f "$CACHE_DIRECTORY/$1_status" ]]; then
+        LAST_HEIGHT=$(cat "$CACHE_DIRECTORY/$1_status")
+    else
+        LAST_HEIGHT=0
+    fi
+
+    if [[ LAST_HEIGHT == 'error' ]]; then
+         >&2 printf "An error occurred on a previous backup of $1 blockchain, will not proceed"
+         return
+    fi
+
+    if [[ "$BLOCKCHAIN_HEIGHT" == "$LAST_HEIGHT" ]]; then
+        printf "No progress since last backup of $1 blockchain, skipping..."
+        return
+    fi
+
+    [[ -d "$BACKUP_DIRECTORY/$1/2" ]] && rm -rf "$BACKUP_DIRECTORY/$1/2"
+
+    [[ -d "$BACKUP_DIRECTORY/$1/1" ]] && mv "$BACKUP_DIRECTORY/$1/1" "$BACKUP_DIRECTORY/$1/2"
+
+    mkdir -p "$BACKUP_DIRECTORY/$1/1"
+
+    sqlite3 {{ forksUsersRootDirectory }}/$2/$3/mainnet/db/blockchain_v$5_mainnet.sqlite "vacuum into '$BACKUP_DIRECTORY/$1/1/blockchain_v$5_mainnet.sqlite'"
+
+    if [[ $? != '0' ]]; then
+        >&2 printf "Could create $1 blockchain backup, suspending backups"
+        printf 'error' > "$CACHE_DIRECTORY/$1_status"
+        exit 4
+    fi
+
+    echo $BLOCKCHAIN_HEIGHT > "$CACHE_DIRECTORY/$1_status"
+}
+
+{% for forksNodeItem in forksNodesConfiguration
+| selectattr('services', 'defined')
+| selectattr('services', 'contains', 'node')
+| selectattr('fork', 'equalto', forksNodeForkIdentifier) %}
+backupFork {{ forksNodeForkIdentifier }} {{
+forksNodeSystemUsername }} {{
+forksNodeConfigurationDirectory }} {{
+forksPropertiesLookupTable[forksNodeForkIdentifier]['nodeRpcPort'] }} {{
+forksPropertiesLookupTable[forksNodeForkIdentifier]['databaseVersion']|default(2) }}
+{% endfor %}

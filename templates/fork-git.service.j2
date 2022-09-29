@@ -1,0 +1,27 @@
+[Unit]
+Description="{{ forksNodeForkIdentifier|capitalize }} Farming Node Service"
+After=network.target
+
+[Service]
+Type=forking
+RestartSec=15s
+Restart=always
+User={{ forksNodeSystemUsername }}
+Group={{ forksNodeSystemUsername }}
+
+WorkingDirectory={{ forksNodeApplicationDirectory }}
+Environment=PATH={{ forksNodeApplicationDirectory }}:{{ forksNodeApplicationDirectory }}/venv/bin
+Environment=TMPDIR={{ forksNodeTempDirectory }}
+
+Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
+Environment=SSL_CERT_DIR=/etc/ssl/certs
+
+ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeServices.0 }}
+{% if forksNodeServices|length > 1 %}{% for nodeService in forksNodeServices|reject('search','1') | list %}ExecStartPost={{
+forksNodeApplicationDirectory }}/venv/bin/{{
+forksNodeExecutableName }} start {{ nodeService }}
+{% endfor %}{% endif %}
+ExecStop={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} stop all -d
+
+[Install]
+WantedBy=multi-user.target

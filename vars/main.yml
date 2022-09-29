@@ -1,0 +1,137 @@
+---
+
+
+# Components
+
+forksNodeIdentifier: >-
+  {{ forksNodeItem.identifier }}
+forksNodeHost: >-
+  {{ forksNodeItem.host }}
+forksNodeForkIdentifier: >-
+  {{ forksNodeItem.fork }}
+
+forksNodeBuildOption: >-
+  {{ ('build' in forksNodeItem)
+  | ternary(forksNodeItem.build, 'git') }}
+forksNodeAlias: >-
+  {{ ('alias' in forksNodeItem)
+  | ternary(forksNodeItem['alias']|default(''),
+  (forksPropertiesLookupTable is defined
+  and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
+  and 'alias' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys() )
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['alias']|default(''),
+  forksNodeForkIdentifier )) }}
+forksNodeSystemUsername: >-
+  {{ ('username' in forksNodeItem)
+  | ternary(forksNodeItem['username']|default(''),
+  forksNodeItem['identifier']) }}
+forksNodeHomeDirectory: >-
+  {{ ('home' in forksNodeItem)
+  | ternary(forksNodeItem['home'],
+  ('username' in forksNodeItem)
+  | ternary(forksUsersRootDirectory + '/' + forksNodeItem['username']|default(''),
+  forksUsersRootDirectory + '/' + forksNodeItem['identifier'] )) }}
+forksNodeServiceName: >-
+  {{ ('serviceName' in forksNodeItem)
+  | ternary(forksNodeItem['serviceName'],
+  forksNodeItem['identifier']) }}
+forksNodeServices: >-
+  {{ ('services' in forksNodeItem)
+  | ternary(forksNodeItem['services'],
+  ['node'] ) }}
+
+# Params
+
+forksNodeRepositoryIdentifier: >-
+  {{ forksPropertiesLookupTable[forksNodeForkIdentifier]['repository'] }}
+forksNodeApplicationDirectoryName: >-
+  {{ forksNodeRepositoryIdentifier
+  | regex_search('[^/]+$') }}
+
+forksNodeBinaryDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/bin
+forksNodeSharedDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/share
+forksNodeTempDirectory: >-
+  {{ forksNodeHomeDirectory }}/.local/tmp
+forksNodeApplicationDirectory: >-
+  {{ forksNodeSharedDirectory }}/{{ forksNodeApplicationDirectoryName }}
+
+forksNodeEnabled: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'enabled' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['enabled'], true) }}
+forksNodeExecutableName: >-
+  {{ (forksPropertiesLookupTable is defined
+  and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
+  and 'executableName' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys())
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['executableName'], forksNodeForkIdentifier) }}
+forksNodeConfigurationDirectory: >-
+  {{ forksNodeHomeDirectory }}/{{ (forksPropertiesLookupTable is defined
+  and forksNodeForkIdentifier in forksPropertiesLookupTable.keys()
+  and 'configurationDirectoryName' in forksPropertiesLookupTable[forksNodeForkIdentifier].keys())
+  | ternary(forksPropertiesLookupTable[forksNodeForkIdentifier]['configurationDirectoryName'], '.'+forksNodeForkIdentifier) }}
+forksNodePermissionsFix: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'permissionsFix' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['permissionsFix'], false) }}
+forksNodeDefaultBranch: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'defaultBranch' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['defaultBranch'], forksDefaultBranch) }}
+forksNodePipInstallation: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'pipInstallation' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['pipInstallation'], false) }}
+forksNodeEnvironmentVariables: >-
+  {{ (forksParameters is defined
+  and forksNodeForkIdentifier in forksParameters
+  and 'environmentVariables' in forksParameters[forksNodeForkIdentifier])
+  | ternary(forksParameters[forksNodeForkIdentifier]['environmentVariables'], []) }}
+
+forksArchitectureLookupTable:
+  arm64: arm64
+  armhf: arm64
+  amd64: amd64
+
+forksPlatformLookupTable:
+  arm64: linux/arm64/v8
+  armhf: linux/arm64/v8
+  amd64: linux/amd64
+
+forksLogAnalyzerArchitectureLookupTable:
+  amd64: amd64
+  armhf: arm
+  arm64: arm
+
+
+forksPublishedPortsLookupTable:
+  all:
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
+  node:
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+  farmer:
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
+  farmer-no-wallet:
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
+  farmer-only:
+    - "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}:{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
+  wallet: []
+  wallet-only: []
+
+
+forksBackupCacheDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/cache"
+forksPatchDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/patches"
+forksInstallerDirectory: "{{ forksManagingHomeDirectory|default('/root') }}/.local/var/forks/installer"
+
+forksNodeSyslogFirstPort: 1515
+
+
+...

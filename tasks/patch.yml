@@ -1,0 +1,54 @@
+---
+
+
+- name: Copy Forks patch files to patch directory
+  when: forkPatchFileForkIdentifier in forkHostForkList
+  become: true
+  vars:
+    forkPatchFileForkIdentifier: >-
+      {{ patchFile.path
+      | relpath(role_path+'/files/patches')
+      | regex_search('^[^/]+') }}
+    forkHostForkList: >-
+      {{ forksNodesConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | map(attribute='fork') | list | unique }}
+  copy:
+    src: "{{ patchFile.path }}"
+    dest: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') }}"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0644
+    force: true
+  loop: "{{ forksNodePatchFindResult.results.0.files }}"
+  loop_control:
+    loop_var: patchFile
+  tags: patches
+
+
+- name: Patch Forks nodes
+  when: forkPatchFileForkIdentifier == forksNodeForkIdentifier
+  become: true
+  vars:
+    forkPatchFileForkIdentifier: >-
+      {{ forksPatchFileItem
+      | relpath(role_path+'/files/patches')
+      | regex_search('^[^/]+') }}
+  copy:
+    src: "{{ forksPatchFileItem }}"
+    dest: >-
+      {{ forksNodeApplicationDirectory }}/{{ forksPatchFileItem
+      | relpath(forksNodePatchFindResult.results.0.invocation.module_args.path) }}
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0644
+    force: true
+  loop: >-
+    {{ forksNodePatchFindResult.results.0.files
+    | map(attribute='path') | list }}
+  loop_control:
+    loop_var: forksPatchFileItem
+  tags: patches
+
+
+...

@@ -1,0 +1,175 @@
+---
+
+
+## Modify config
+
+- name: forksNodeItem
+  when: forksNodeDebugLevel|int > 0
+  debug:
+    msg: "{{ forksNodeItem }}"
+
+- name: Fetch Fork config data
+  when: "'config' in forksNodeItem.keys()"
+  become: true
+  slurp:
+    src: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+  register: configSlurpResult
+  tags: config
+
+- name: Store modified Fork config data
+  when: "'config' in forksNodeItem.keys()"
+  become: true
+  vars:
+    forksNodeSystemUsername: >-
+      {{ ('username' in forksNodeItem)
+      |ternary(forksNodeItem['username'],
+      forksNodeItem['identifier']) }}
+    forkConfigurationData: "{{ configSlurpResult['content'] | b64decode | from_yaml }}"
+  copy:
+    dest: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+    content: "{{ forkConfigurationData | combine(forksNodeItem.config, recursive=True)|to_yaml }}"
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+    force: true
+  tags: config
+
+
+  # Cronjobs
+
+- name: "Adds paths to CA certs to {{ forksNodeIdentifier }} crontab"
+  become: true
+  cron:
+    name: REQUESTS_CA_BUNDLE
+    user: "{{ forksNodeSystemUsername }}"
+    env: yes
+    job: "{{ forksSystemCaCertificatesFilePath }}"
+
+- name: "Adds certs path to {{ forksNodeIdentifier }} crontab"
+  become: true
+  cron:
+    name: SSL_CERT_DIR
+    user: "{{ forksNodeSystemUsername }}"
+    env: yes
+    job: /etc/ssl/certs
+
+
+  # Auto-updates
+
+- name: "Generate {{ forksNodeIdentifier }} auto-update script"
+  when:
+    - "'updateHour' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateMinute' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+  become: true
+  template:
+    src: update-git.sh.j2
+    dest: "{{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh"
+    force: true
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0750
+  tags: updates
+
+- name: "Setup daily cronjob for {{ forksNodeIdentifier }} auto-update"
+  when:
+    - "'updateHour' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+    - "'updateMinute' in forksSettingsLookupTable[forksNodeForkIdentifier].keys()"
+  become: true
+  cron:
+    name: "{{ forksNodeIdentifier }} daily auto-update"
+    user: "{{ forksManagingSystemUsername|default('root') }}"
+    hour: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['updateHour']|string }}"
+    minute: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['updateMinute']|string }}"
+    job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh 1>/dev/null 2>&1"
+  tags: updates
+
+
+- name: "Generate {{ forksNodeForkIdentifier|capitalize }} service file"
+  become: true
+  template:
+    src: fork-git.service.j2
+    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeServiceName }}.service"
+    force: true
+    owner: root
+    group: root
+    mode: 0644
+
+
+  ## Firewall
+
+- name: "Allow {{ forksNodeIdentifier }} node network traffic"
+  when: 
+    - "'services' in forksNodeItem"
+    - "'node' in forksNodeItem.services"
+  become: true
+  ufw:
+    rule: allow
+    port: "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['nodePort'] }}"
+    proto: tcp
+
+- name: "Allow {{ forksNodeIdentifier }} farmer network traffic"
+  when: 
+    - "'services' in forksNodeItem"
+    - >-
+      'farmer' in forksNodeItem.services
+      or 'farmer' in forksNodeItem.services
+  become: true
+  ufw:
+    rule: allow
+    port: "{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['farmerPort'] }}"
+    proto: tcp
+
+
+  # Daily backup
+
+- name: "Generate {{ forksNodeIdentifier }} backup scripts"
+  when:
+    - forksBackupDataDirectory is defined
+    - "'node' in forksNodeItem.services"
+    - "'backupHour' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+    - "'backupMinute' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+  become: true
+  template:
+    src: backup-git.sh.j2
+    dest: "{{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeIdentifier }}.sh"
+    force: true
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0755
+  tags: backups
+
+- name: "Setup daily cronjob for {{ forksNodeIdentifier }} blockchain backups"
+  when:
+    - forksBackupDataDirectory is defined
+    - "'node' in forksNodeItem.services"
+    - "'backupHour' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+    - "'backupMinute' in forksSettingsLookupTable[forksNodeForkIdentifier]"
+  become: true
+  cron:
+    name: "{{ forksNodeIdentifier }} daily backup"
+    user: "{{ forksManagingSystemUsername|default('root') }}"
+    hour: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['backupHour'] }}"
+    minute: "{{ forksSettingsLookupTable[forksNodeForkIdentifier]['backupMinute'] }}"
+    job: "sudo {{ forksManagingHomeDirectory|default('/root') }}/.local/bin/backup-{{ forksNodeIdentifier }}.sh"
+  tags: backups
+
+# Aliases
+
+- name: "Adding aliases for {{ forksNodeIdentifier }} to .bashrc of managing user"
+  become: true
+  blockinfile:
+    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+    insertafter: '^#NON-INTERACTIVE.*'
+    marker: "# {mark} {{ forksNodeItem.identifier }} ALIASES"
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0640
+    block: |
+      {{ forksNodeAlias }}() {
+          sudo su - {{ forksNodeSystemUsername }} -c "{{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} $*"
+      }
+      alias tail_{{ forksNodeAlias }}="sudo tail -f {{ forksNodeConfigurationDirectory }}/mainnet/log/debug.log"
+  tags: aliases
+
+
+...

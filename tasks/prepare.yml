@@ -1,0 +1,252 @@
+---
+
+
+- name: Ensure Forks Python virtual environment
+  include_role:
+    name: maveno_de.forks.utilities
+    tasks_from: ensureVirtualEnvironment.yml
+
+- name: Update local CA certs
+  become: true
+  shell: update-ca-certificates
+
+
+  #HINT: Stopping all running services to prevent timeouts
+  # when building due to cpu time consumption
+- name: Stop Forks services
+  vars:
+    baremetalComponents: >-
+     {{ (forksNodesConfiguration
+     | selectattr('build', 'undefined')
+     + forksNodesConfiguration
+     | selectattr('build', 'defined')
+     | selectattr('build', 'equalto', 'git'))
+     | selectattr('host', 'equalto', inventory_hostname) }}
+  become: true
+  systemd:
+    name: "{{ forkServiceNameItem }}.service"
+    state: stopped
+  changed_when: false
+  failed_when: false
+  loop: >-
+    {{ (baremetalComponents|selectattr('serviceName', 'defined')|map(attribute='serviceName')
+    + baremetalComponents|selectattr('serviceName', 'undefined')|map(attribute='fork'))|unique }}
+  loop_control:
+    loop_var: forkServiceNameItem
+
+
+- name: Adding aliases for showing temp and CPU clock to shell of managing user (RPi only)
+  when: >
+    ansible_lsb.id == 'Raspbian'
+    or 'raspi' in ansible_kernel and ansible_distribution == 'Ubuntu'
+  become: true
+  lineinfile:
+    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+    line: "{{ forksCommandLineItem }}"
+    insertafter: '^#NON-INTERACTIVE$'
+  loop:
+    - alias show_temp='watch -n 1 sudo vcgencmd measure_temp'
+    - alias show_clock='watch -n 1 sudo vcgencmd measure_clock arm'
+  loop_control:
+    loop_var: forksCommandLineItem
+  tags: utilities
+
+
+- name: Ensure local directories for managing user
+  become: true
+  file:
+    path: "{{ forksManagingHomeDirectory|default('/root') }}/.local/{{ forksLocalDirectoryItem }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0750
+  loop:
+    - bin
+    - tmp
+    - opt
+    - var/forks
+  loop_control:
+    loop_var: forksLocalDirectoryItem
+  tags: utilities
+
+
+- name: Switch temporarily to system python
+  set_fact: 
+    tempPythonInterpreter: >-
+      {{ ansible_python_interpreter
+      | default(forksSystemPythonInterpreter) }}
+- set_fact: 
+    ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
+###
+
+- name: Install required apt packages
+  become: true
+  apt:
+    pkg:
+      - acl
+      - git
+      - screen
+      - xz-utils
+      - sysstat
+    state: latest
+    cache_valid_time: 10800
+
+###
+- name: Switch back to framework python venv
+  set_fact: 
+    ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+
+
+## Backup
+
+- name: Ensure backup data directory
+  when: forksBackupDataDirectory is defined
+  become: true
+  file:
+    path: "{{ forksBackupDataDirectory }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0700
+
+- name: Create fork backup data directories
+  when: forksBackupDataDirectory is defined
+  become: true
+  file:
+    path: "{{ forksBackupDataDirectory }}/{{ forksNodeForkItem }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: 0700
+  loop: >-
+    {{ forksNodesConfiguration
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksNodeForkItem
+
+
+  ## Node specific
+
+- name: Prepare Fork nodes
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks: prepare-node.yml
+  loop: >-
+    {{ forksNodesConfiguration }}
+  loop_control:
+    loop_var: forksNodeItem
+
+
+- name: Prepare Fork Git nodes
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks: prepare-git.yml
+  loop: >-
+    {{ (forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'undefined')
+    + forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | selectattr('build', 'defined')
+    | selectattr('build', 'equalto', 'git')) }}
+  loop_control:
+    loop_var: forksNodeItem
+
+- name: Ensure Forks installer directory
+  become: true
+  file:
+    path: "{{ forksInstallerDirectory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop_control:
+    loop_var: forksNodeItem
+  tags: patches
+
+- name: Ensure Forks installer subdirectories
+  become: true
+  file:
+    path: "{{ forksInstallerDirectory }}/{{ forksNodeForkItem }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop: >-
+    {{ forksNodesConfiguration
+    | selectattr('host', 'equalto', inventory_hostname)
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksNodeForkItem
+  tags: patches
+
+
+- name: "Enumerate Forks patch files"
+  delegate_to: localhost
+  find:
+    path: "{{ role_path }}/files/patches/{{ forksNodeForkIdentifierItem }}"
+    recurse: true
+  register: forksNodePatchFindResult
+  loop: >-
+    {{ forksNodesConfiguration
+    | map(attribute='fork') | list | unique }}
+  loop_control:
+    loop_var: forksNodeForkIdentifierItem
+  tags: patches
+  run_once: true
+
+- name: Ensure Forks patch directory
+  become: true
+  file:
+    path: "{{ forksPatchDirectory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+
+- name: Ensure Forks patch subdirectories
+  when: forkPatchFileForkIdentifier in forkHostForkList
+  become: true
+  vars:
+    forkPatchFileForkIdentifier: >-
+      {{ patchFile.path
+      | relpath(role_path+'/files/patches')
+      | regex_search('^[^/]+') }}
+    forkHostForkList: >-
+      {{ forksNodesConfiguration
+      | selectattr('host', 'equalto', inventory_hostname)
+      | map(attribute='fork') | list | unique }}
+  file:
+    path: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') | dirname }}"
+    state: directory
+    recurse: yes
+    owner: "{{ forksManagingSystemUsername|default('root') }}"
+    group: "{{ forksManagingSystemUsername|default('root') }}"
+    mode: u=rwX,g=rX,o=rX
+  loop: "{{ forksNodePatchFindResult.results.0.files }}"
+  loop_control:
+    loop_var: patchFile
+  tags: patches
+
+
+  #HINT: Can cause permissions error when using multiple usernames for forks
+- name: Remove Forks specific temp dir
+  become: true
+  file: 
+    path: /tmp/clvm_compile
+    state: absent
+
+
+- name: Setup Forks Node Tunnels
+  when: forksNodeItem.host == inventory_hostname
+  include_tasks: tunnels.yml
+  loop: >-
+    {{ forksNodesConfiguration
+    | selectattr('tunnels', 'defined')  }}
+  loop_control:
+    loop_var: forksNodeItem
+  tags: tunnels
+
+
+...

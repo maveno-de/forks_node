@@ -1,0 +1,20 @@
+---
+
+
+- name: Prepare Chia forks installation
+  include_tasks: prepare.yml
+  tags:
+    - patches
+    - tunnels
+
+- name: Install Chia forks
+  include_tasks: install.yml
+  tags: patches
+
+
+- name: Configure Chia forks installation
+  include_tasks: configure.yml
+  tags: always
+
+
+...

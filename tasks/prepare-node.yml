@@ -1,0 +1,59 @@
+---
+
+
+- name: "Ensure {{ forksNodeForkIdentifier|capitalize }} system user"
+  become: true
+  user:
+    name: "{{ forksNodeSystemUsername }}"
+    home: "{{ forksNodeHomeDirectory }}"
+    shell: /bin/bash
+    comment: "{{ forksNodeForkIdentifier|capitalize }}"
+    umask: '0027'
+
+- name: Ensure remote temp dir for ansible
+  become: true
+  file:
+    path: "{{ forksNodeHomeDirectory }}/.ansible/tmp"
+    state: directory
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0700
+
+
+- name: Ensure .ssh directory for {{ forksNodeForkIdentifier|capitalize }} system user"
+  become: true
+  file:
+    path: "{{ forksNodeHomeDirectory }}/.ssh"
+    state: directory
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0700
+
+- name: "Adding SSH public keys to user {{ forksNodeSystemUsername }}"
+  when:
+    - forksPublicSshKeys is defined
+    - forksPublicSshKeys|length > 0
+  become: true
+  authorized_key:
+    user: "{{ forksNodeSystemUsername }}"
+    key: "{{ forksPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
+    exclusive: true
+
+
+- name: "Ensure {{ forksNodeForkIdentifier|capitalize }} local directories"
+  become: true
+  file:
+    path: "{{ forkLocalDirectoryItem }}"
+    state: directory
+    owner: "{{ forksNodeSystemUsername }}"
+    group: "{{ forksNodeSystemUsername }}"
+    mode: 0750
+  loop:
+    - "{{ forksNodeBinaryDirectory }}"
+    - "{{ forksNodeSharedDirectory }}"
+    - "{{ forksNodeTempDirectory }}"
+  loop_control:
+    loop_var: forkLocalDirectoryItem
+
+
+...
