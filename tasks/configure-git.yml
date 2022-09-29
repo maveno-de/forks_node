@@ -4,6 +4,7 @@
 ## Modify config
 
 - name: forksComponentItem
+  when: forksNodeDebugLevel|int > 0
   debug:
     msg: "{{ forksComponentItem }}"
 
@@ -13,7 +14,7 @@
   slurp:
     src: "{{ forksConfigurationDirectory }}/mainnet/config/config.yaml"
   register: configSlurpResult
-
+  tags: config
 
 - name: Store modified Fork config data
   when: "'config' in forksComponentItem.keys()"
@@ -31,6 +32,7 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: 0750
     force: true
+  tags: config
 
 
 # - name: "Add {{ forksComponentIdentifier|capitalize }} wallet key"

@@ -14,7 +14,9 @@
     | selectattr('build', 'equalto', 'git')) }}
   loop_control:
     loop_var: forksComponentItem
-  tags: updates
+  tags:
+    - config
+    - updates
 
 - name: Configure Fork Docker Components
   when: forksComponentItem.host == inventory_hostname
@@ -82,6 +84,7 @@
   loop_control:
     loop_var: forksComponentItem
   tags:
+    - config
     - patches
     - logging
     - certificates
