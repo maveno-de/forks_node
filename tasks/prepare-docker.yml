@@ -10,7 +10,7 @@
       - export XDG_RUNTIME_DIR=/run/user/$(id -u)
       - export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
   include_role:
-    name: maveno_de.forks.forks_utilities
+    name: maveno_de.forks.utilities
     tasks_from: generateBashRc.yml
 
 

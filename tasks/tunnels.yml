@@ -12,7 +12,7 @@
       | selectattr('identifier', 'equalto', forksTunnelItem.target))[0]['host'] }}
     forksTunnelContextTunnelPorts: "{{ forksTunnelItem.ports }}"
   include_role:
-    name: maveno_de.forks.forks_tunnel
+    name: maveno_de.forks.tunnel
     apply:
       tags: tunnels
   loop: >-

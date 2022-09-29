@@ -2,7 +2,7 @@ galaxy_info:
   author: Javanaut
   description: Chia Fork Node Distribution and Management
   company: Maveno
-  role_name: forks_node
+  role_name: node
   namespace: maveno_de
 
   # If the issue tracker for your role is not on github, uncomment the
@@ -21,18 +21,12 @@ galaxy_info:
   # If you don't wish to enumerate all versions for a particular platform, use 'all'.
   # To view available platforms and versions (or releases), visit:
   # https://galaxy.ansible.com/api/v1/platforms/
-  #
-  # platforms:
-  # - name: Fedora
-  #   versions:
-  #   - all
-  #   - 25
-  # - name: SomePlatform
-  #   versions:
-  #   - all
-  #   - 1.0
-  #   - 7
-  #   - 99.99
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - 20
+        - 22
 
   galaxy_tags: []
     # List tags for your role here, one per line. A tag is a keyword that describes
@@ -44,7 +38,7 @@ galaxy_info:
 
 dependencies:
 
-  - name: maveno_de.forks.forks_facts
-    src: refulgent@scampi.maveno.de:osgw/platform/forks_facts.git
+  - name: maveno_de.forks.facts
+    src: https://github.com/maveno-de/forks_facts.git
     scm: git
     version: dev

@@ -3,7 +3,7 @@
 
 - name: Ensure Forks Python virtual environment
   include_role:
-    name: maveno_de.forks.forks_utilities
+    name: maveno_de.forks.utilities
     tasks_from: ensureVirtualEnvironment.yml
 
 - name: Update local CA certs

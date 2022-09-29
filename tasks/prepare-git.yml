@@ -10,7 +10,7 @@
     contextNonInteractiveRules:
       - ". {{ forksNodeApplicationDirectory }}/venv/bin/activate"
   include_role:
-    name: maveno_de.forks.forks_utilities
+    name: maveno_de.forks.utilities
     tasks_from: generateBashRc.yml
 
 
