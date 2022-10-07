@@ -62,10 +62,13 @@
 - name: Add Forks {{ forksNodeItem.identifier }} ramdisk for logging to fstab file
   become: true
   vars:
+
+
+
     forksNodeLogRamdiskSize: >-
       {{ ('node' in forksNodeItem.services
-      or forksNodeItem.fork == 'silicoin'
-      or forksNodeItem.fork == 'ecostake')
+      or forksPropertiesLookupTable[forksNodeItem.fork]['databaseVersion']
+      | default(2) == 1)
       | ternary('50M', '20M') }}
   lineinfile:
     path: /etc/fstab
@@ -130,9 +133,8 @@
         log_filename: log/debug.log
         log_level: INFO
         log_maxfilesrotation: {{
-      (forksNodeItem.fork == 'silicoin'
-      or forksNodeItem.fork == 'ecostake')
-      | ternary(1, 2) }}
+      forksPropertiesLookupTable[forksNodeItem.fork]['databaseVersion']
+      | default(2) }}
         log_maxbytesrotation: {{ forksNodeLogMaxBytesRotation }}
         log_stdout: false
         log_syslog: false
