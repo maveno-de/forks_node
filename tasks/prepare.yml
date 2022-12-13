@@ -55,10 +55,11 @@
 - name: Ensure local directories for managing user
   become: true
   file:
-    path: "{{ forksManagingHomeDirectory|default('/root') }}/.local/{{ forksLocalDirectoryItem }}"
+    path: >-
+      {{ forksManagingHomeDirectory | default('/root') }}/.local/{{ forksLocalDirectoryItem }}
     state: directory
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0750
   loop:
     - bin
@@ -105,8 +106,8 @@
   file:
     path: "{{ forksBackupDataDirectory }}"
     state: directory
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0700
 
 - name: Create fork backup data directories
@@ -115,8 +116,8 @@
   file:
     path: "{{ forksBackupDataDirectory }}/{{ forksNodeForkItem }}"
     state: directory
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0700
   loop: >-
     {{ forksNodesConfiguration
@@ -156,8 +157,8 @@
     path: "{{ forksInstallerDirectory }}"
     state: directory
     recurse: yes
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
   loop_control:
     loop_var: forksNodeItem
@@ -169,8 +170,8 @@
     path: "{{ forksInstallerDirectory }}/{{ forksNodeForkItem }}"
     state: directory
     recurse: yes
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
   loop: >-
     {{ forksNodesConfiguration
@@ -201,8 +202,8 @@
     path: "{{ forksPatchDirectory }}"
     state: directory
     recurse: yes
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
 
 - name: Ensure Forks patch subdirectories
@@ -221,8 +222,8 @@
     path: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') | dirname }}"
     state: directory
     recurse: yes
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
   loop: "{{ forksNodePatchFindResult.results.0.files }}"
   loop_control:

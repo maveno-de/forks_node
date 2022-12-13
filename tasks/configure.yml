@@ -82,7 +82,7 @@
 - name: Assign Chia fork instance group to managing user
   become: true
   user:
-    name: "{{ forksManagingSystemUsername|default('root') }}"
+    name: "{{ forksManagingSystemUsername | default('root') }}"
     groups: 
       - "{{ forkSystemUsernameItem }}"
     append: yes

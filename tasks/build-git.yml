@@ -35,8 +35,8 @@
   copy:
     src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
     dest: "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh"
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0750
     force: true
   tags: patches
@@ -72,7 +72,7 @@
 
 
 - name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }}"
-  when: forksNodeEnvironmentVariables|length == 0
+  when: forksNodeEnvironmentVariables | length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   shell: ./install.sh
@@ -84,7 +84,7 @@
   register: installBlockchainJob
 
 - name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} being installed"
-  when: forksNodeEnvironmentVariables|length == 0
+  when: forksNodeEnvironmentVariables | length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   async_status:
@@ -95,7 +95,7 @@
   delay: 15
 
 - name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} (additional environment variables)"
-  when: forksNodeEnvironmentVariables|length > 0
+  when: forksNodeEnvironmentVariables | length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   shell: ./install.sh
@@ -108,7 +108,7 @@
   register: installBlockchainJob
 
 - name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} being installed (additional environment variables)"
-  when: forksNodeEnvironmentVariables|length > 0
+  when: forksNodeEnvironmentVariables | length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   async_status:

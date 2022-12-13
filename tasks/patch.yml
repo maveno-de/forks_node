@@ -16,8 +16,8 @@
   copy:
     src: "{{ patchFile.path }}"
     dest: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') }}"
-    owner: "{{ forksManagingSystemUsername|default('root') }}"
-    group: "{{ forksManagingSystemUsername|default('root') }}"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0644
     force: true
   loop: "{{ forksNodePatchFindResult.results.0.files }}"
