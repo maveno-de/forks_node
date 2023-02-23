@@ -34,6 +34,20 @@
     force: true
   tags: config
 
+  # HINT: to_yaml messing up data types, here quoting port numbers making them strings.
+  # Chia 1.7.0 will not run properly with port numbers given as strings. Since no quotes
+  # appear in unmodified chia config.yml with current version any appearances are just
+  # removed here as workaround.
+- name: Remove quotes in modified Fork config data
+  when: "'config' in forksNodeItem.keys()"
+  become: true
+  replace:
+    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+    regexp: >-
+      ^([^']+)'([^']+)'([^']*)$
+    replace: >-
+      \1\2\3
+
 
   # Cronjobs
 

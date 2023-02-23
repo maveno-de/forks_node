@@ -176,9 +176,9 @@
   delay: 15
 
 
-- name: Patch Forks nodes
-  include_tasks: patch.yml
-  tags: patches
+# - name: Patch Forks nodes
+#   include_tasks: patch.yml
+#   tags: patches
 
 
 - name: "Fix {{ forksNodeForkIdentifier }} ssl permissions on mozilla-ca module"

@@ -44,10 +44,10 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init --fix-ssl-permissions"
 {% endif %}
 
-        if [[ -d "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}" ]]; then
+{#        if [[ -d "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}" ]]; then
           cp -a "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}/*" "$APP_DIR" 2>/dev/null
           chown "$USER_NAME:$USER_NAME" -R "$APP_DIR"
-        fi
+        fi #}
 
         if [[ "${1}" == '--force' ]] || [[ "${servicePreviousStatus}" == 'active' ]]; then
             sleep 60

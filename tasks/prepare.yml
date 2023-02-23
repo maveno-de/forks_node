@@ -1,6 +1,28 @@
 ---
 
 
+- name: Store location of current python venv
+  set_fact:
+    tempPythonInterpreter: >-
+      {{ ansible_python_interpreter
+      | default(forksSystemPythonInterpreter) }}
+- name: Switch temporarily to system python
+  set_fact:
+    ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
+###
+
+- name: Install required apt packages
+  become: true
+  apt:
+    cache_valid_time: 10800
+    name: "{{ forksCommonSystemPackages }}"
+
+###
+- name: Switch back to framework python venv
+  set_fact:
+    ansible_python_interpreter: "{{ tempPythonInterpreter }}"
+
+
 - name: Ensure Forks Python virtual environment
   include_role:
     name: maveno_de.forks.utilities
@@ -70,32 +92,6 @@
     loop_var: forksLocalDirectoryItem
   tags: utilities
 
-
-- name: Switch temporarily to system python
-  set_fact: 
-    tempPythonInterpreter: >-
-      {{ ansible_python_interpreter
-      | default(forksSystemPythonInterpreter) }}
-- set_fact: 
-    ansible_python_interpreter: "{{ forksSystemPythonInterpreter }}"
-###
-
-- name: Install required apt packages
-  become: true
-  apt:
-    pkg:
-      - acl
-      - git
-      - screen
-      - xz-utils
-      - sysstat
-    state: latest
-    cache_valid_time: 10800
-
-###
-- name: Switch back to framework python venv
-  set_fact: 
-    ansible_python_interpreter: "{{ tempPythonInterpreter }}"
 
 
 ## Backup
