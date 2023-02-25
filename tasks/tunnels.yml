@@ -3,20 +3,23 @@
 
 - name: Setup Forks Tunnel
   vars:
+    tunnelsTargetNodeJsonQuery: >-
+      [?value.forksHostConfiguration[?identifier=='{{
+      forksTunnelItem.target }}'].identifier]
     forksTunnelContextTunnelIdentifier: "{{ forksTunnelItem.target }}"
-    forksTunnelContextSourceHostname: "{{ forksNodeItem.host }}"
+    forksTunnelContextSourceHostname: "{{ inventory_hostname }}"
     forksTunnelContextSourceSystemUsername: "{{ forksNodeSystemUsername }}"
     forksTunnelContextSourceHomeDirectory: "{{ forksNodeHomeDirectory }}"
     forksTunnelContextTargetHostname: >-
-      {{ (forksNodesConfiguration
-      | selectattr('identifier', 'equalto', forksTunnelItem.target))[0]['host'] }}
+      {{ (hostvars | dict2items
+      | json_query(tunnelsTargetNodeJsonQuery))[0]['key'] }}
     forksTunnelContextTunnelPorts: "{{ forksTunnelItem.ports }}"
   include_role:
     name: maveno_de.forks.tunnel
     apply:
       tags: tunnels
   loop: >-
-    {{ forksNodeItem.tunnels }}
+    {{ forksNodeConfiguration.tunnels }}
   loop_control:
     loop_var: forksTunnelItem
   tags: tunnels

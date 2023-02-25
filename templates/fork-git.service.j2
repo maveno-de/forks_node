@@ -1,5 +1,5 @@
 [Unit]
-Description="{{ forksNodeForkIdentifier|capitalize }} Farming Node Service"
+Description="{{ forkIdentifier | capitalize }} Farming Node Service"
 After=network.target
 
 [Service]
@@ -17,7 +17,7 @@ Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
 Environment=SSL_CERT_DIR=/etc/ssl/certs
 
 ExecStart={{ forksNodeApplicationDirectory }}/venv/bin/{{ forksNodeExecutableName }} start {{ forksNodeServices.0 }}
-{% if forksNodeServices|length > 1 %}{% for nodeService in forksNodeServices|reject('search','1') | list %}ExecStartPost={{
+{% if forksNodeServices | length > 1 %}{% for nodeService in forksNodeServices | reject('search','1') | list %}ExecStartPost={{
 forksNodeApplicationDirectory }}/venv/bin/{{
 forksNodeExecutableName }} start {{ nodeService }}
 {% endfor %}{% endif %}

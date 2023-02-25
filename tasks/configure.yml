@@ -2,18 +2,10 @@
 
 
 - name: Configure Fork Git nodes
-  when: forksNodeItem.host == inventory_hostname
   include_tasks: configure-git.yml
-  loop: >-
-    {{ (forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'undefined')
-    + forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git')) }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags:
     - config
     - updates
@@ -23,17 +15,20 @@
 
   ## Commons
 
-- name: Configure Fork node ramdisk logging
-  when: forksNodeItem.host == inventory_hostname
+- name: Configure Fork nodes ramdisk logging
+  when: forksNodeConfiguration.build | default('git') == 'git'
   include_tasks:
     file: logging.yml
     apply:
       tags: logging
-  loop: >-
-    {{ forksNodesConfiguration }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags: logging
+
+- name: Mount ramdisk(s) for Forks nodes logging
+  become: true
+  command: mount -a
 
 
 - name: Create tempfile directory for certificates
@@ -45,33 +40,31 @@
   run_once: true
   tags: certificates
 
-- name: Distribute certs
+- name: Distribute certs to Forks nodes
+  when:
+    - "'certs' in forksNodeConfiguration.keys()"
+    - forksNodeConfiguration.build | default('git') == 'git'
   include_tasks:
     file: certificates.yml
     apply:
       tags: certificates
-  loop: >-
-    {{ forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('certs', 'defined') }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags: certificates
 
 
-- name: Restart Forks services
+- name: Restart Forks nodes services
   become: true
   systemd:
     name: "{{ forksNodeServiceName }}.service"
     daemon-reload: yes
     enabled: "{{ forksNodeEnabled }}"
-    state: "{{ forksNodeEnabled|ternary('restarted', 'stopped') }}"
+    state: "{{ forksNodeEnabled | ternary('restarted', 'stopped') }}"
   changed_when: false
-  loop: >-
-    {{ forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname) }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags:
     - config
     - patches
@@ -79,20 +72,16 @@
     - certificates
 
 
-- name: Assign Chia fork instance group to managing user
+- name: Assign Chia fork instance group to managing users'
   become: true
   user:
     name: "{{ forksManagingSystemUsername | default('root') }}"
     groups: 
-      - "{{ forkSystemUsernameItem }}"
+      - "{{ forksNodeSystemUsername }}"
     append: yes
-  loop: >-
-    {{ (forksNodesConfiguration|selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('username', 'defined')|map(attribute='username')
-    + forksNodesConfiguration|selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('username', 'undefined')|map(attribute='identifier'))|unique }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forkSystemUsernameItem
+    loop_var: forksNodeConfiguration
 
 
 ...

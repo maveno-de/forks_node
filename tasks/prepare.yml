@@ -36,34 +36,26 @@
   #HINT: Stopping all running services to prevent timeouts
   # when building due to cpu time consumption
 - name: Stop Forks services
-  vars:
-    baremetalComponents: >-
-     {{ (forksNodesConfiguration
-     | selectattr('build', 'undefined')
-     + forksNodesConfiguration
-     | selectattr('build', 'defined')
-     | selectattr('build', 'equalto', 'git'))
-     | selectattr('host', 'equalto', inventory_hostname) }}
+  when: forksNodeConfiguration.build | default('git') == 'git'
   become: true
   systemd:
-    name: "{{ forkServiceNameItem }}.service"
+    name: "{{ forksNodeServiceName }}.service"
     state: stopped
   changed_when: false
   failed_when: false
-  loop: >-
-    {{ (baremetalComponents|selectattr('serviceName', 'defined')|map(attribute='serviceName')
-    + baremetalComponents|selectattr('serviceName', 'undefined')|map(attribute='fork'))|unique }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forkServiceNameItem
+    loop_var: forksNodeConfiguration
 
 
 - name: Adding aliases for showing temp and CPU clock to shell of managing user (RPi only)
-  when: >
+  when: >-
     ansible_lsb.id == 'Raspbian'
-    or 'raspi' in ansible_kernel and ansible_distribution == 'Ubuntu'
+    or ('raspi' in ansible_kernel
+    and ansible_distribution == 'Ubuntu')
   become: true
   lineinfile:
-    path: "{{ forksManagingHomeDirectory|default('/root') }}/.bashrc"
+    path: "{{ forksManagingHomeDirectory | default('/root') }}/.bashrc"
     line: "{{ forksCommandLineItem }}"
     insertafter: '^#NON-INTERACTIVE$'
   loop:
@@ -96,7 +88,7 @@
 
 ## Backup
 
-- name: Ensure backup data directory
+- name: Ensure Forks backup root directory
   when: forksBackupDataDirectory is defined
   become: true
   file:
@@ -106,96 +98,71 @@
     group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0700
 
-- name: Create fork backup data directories
+- name: Create Forks logging directories
+  become: true
+  file:
+    path: "{{ forksLoggingDirectory }}"
+    state: directory
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
+    mode: 0750
+
+
+- name: Create Forks backup data directories
   when: forksBackupDataDirectory is defined
   become: true
   file:
-    path: "{{ forksBackupDataDirectory }}/{{ forksNodeForkItem }}"
+    path: "{{ forksBackupDataDirectory }}/{{ forksForkItem }}"
     state: directory
     owner: "{{ forksManagingSystemUsername | default('root') }}"
     group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0700
-  loop: >-
-    {{ forksNodesConfiguration
-    | map(attribute='fork') | list | unique }}
+  loop: "{{ forksProperties.keys() | select('in', group_names) }}"
   loop_control:
-    loop_var: forksNodeForkItem
+    loop_var: forksForkItem
 
 
   ## Node specific
 
 - name: Prepare Fork nodes
-  when: forksNodeItem.host == inventory_hostname
   include_tasks: prepare-node.yml
-  loop: >-
-    {{ forksNodesConfiguration }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
+
+
 
 
 - name: Prepare Fork Git nodes
-  when: forksNodeItem.host == inventory_hostname
+  when: forksNodeConfiguration.build | default('git') == 'git'
   include_tasks: prepare-git.yml
-  loop: >-
-    {{ (forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'undefined')
-    + forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git')) }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
 
-- name: Ensure Forks installer directory
-  become: true
-  file:
-    path: "{{ forksInstallerDirectory }}"
-    state: directory
-    recurse: yes
-    owner: "{{ forksManagingSystemUsername | default('root') }}"
-    group: "{{ forksManagingSystemUsername | default('root') }}"
-    mode: u=rwX,g=rX,o=rX
-  loop_control:
-    loop_var: forksNodeItem
-  tags: patches
 
 - name: Ensure Forks installer subdirectories
   become: true
   file:
-    path: "{{ forksInstallerDirectory }}/{{ forksNodeForkItem }}"
+    path: "{{ forksInstallerDirectory }}/{{ forkIdentifier }}"
     state: directory
     recurse: yes
     owner: "{{ forksManagingSystemUsername | default('root') }}"
     group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
-  loop: >-
-    {{ forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | map(attribute='fork') | list | unique }}
-  loop_control:
-    loop_var: forksNodeForkItem
-  tags: patches
 
-
-- name: "Enumerate Forks patch files"
+- name: Enumerate Forks patch files
   delegate_to: localhost
   find:
-    path: "{{ role_path }}/files/patches/{{ forksNodeForkIdentifierItem }}"
+    path: "{{ role_path }}/files/patches/{{ forkIdentifier }}"
     recurse: true
   register: forksNodePatchFindResult
-  loop: >-
-    {{ forksNodesConfiguration
-    | map(attribute='fork') | list | unique }}
-  loop_control:
-    loop_var: forksNodeForkIdentifierItem
-  tags: patches
-  run_once: true
+
 
 - name: Ensure Forks patch directory
   become: true
   file:
-    path: "{{ forksPatchDirectory }}"
+    path: "{{ forksPatchRootDirectory }}"
     state: directory
     recurse: yes
     owner: "{{ forksManagingSystemUsername | default('root') }}"
@@ -203,25 +170,17 @@
     mode: u=rwX,g=rX,o=rX
 
 - name: Ensure Forks patch subdirectories
-  when: forkPatchFileForkIdentifier in forkHostForkList
   become: true
-  vars:
-    forkPatchFileForkIdentifier: >-
-      {{ patchFile.path
-      | relpath(role_path+'/files/patches')
-      | regex_search('^[^/]+') }}
-    forkHostForkList: >-
-      {{ forksNodesConfiguration
-      | selectattr('host', 'equalto', inventory_hostname)
-      | map(attribute='fork') | list | unique }}
   file:
-    path: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') | dirname }}"
+    path: >-
+      {{ forksPatchRootDirectory }}/{{ patchFile.path
+      | relpath(role_path + '/files/patches') | dirname }}
     state: directory
     recurse: yes
     owner: "{{ forksManagingSystemUsername | default('root') }}"
     group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: u=rwX,g=rX,o=rX
-  loop: "{{ forksNodePatchFindResult.results.0.files }}"
+  loop: "{{ forksNodePatchFindResult.files | default([]) }}"
   loop_control:
     loop_var: patchFile
   tags: patches
@@ -236,13 +195,11 @@
 
 
 - name: Setup Forks Node Tunnels
-  when: forksNodeItem.host == inventory_hostname
+  when: "'tunnels' in forksNodeConfiguration"
   include_tasks: tunnels.yml
-  loop: >-
-    {{ forksNodesConfiguration
-    | selectattr('tunnels', 'defined')  }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags: tunnels
 
 

@@ -15,7 +15,7 @@
       | map(attribute='fork') | list | unique }}
   copy:
     src: "{{ patchFile.path }}"
-    dest: "{{ forksPatchDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') }}"
+    dest: "{{ forksPatchRootDirectory }}/{{ patchFile.path | relpath(role_path+'/files/patches') }}"
     owner: "{{ forksManagingSystemUsername | default('root') }}"
     group: "{{ forksManagingSystemUsername | default('root') }}"
     mode: 0644
@@ -27,7 +27,7 @@
 
 
 - name: Patch Forks nodes
-  when: forkPatchFileForkIdentifier == forksNodeForkIdentifier
+  when: forkPatchFileForkIdentifier == forkIdentifier
   become: true
   vars:
     forkPatchFileForkIdentifier: >-

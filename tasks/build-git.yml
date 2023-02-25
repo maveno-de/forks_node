@@ -1,14 +1,14 @@
 ---
 
 
-- name: "Remove {{ forksNodeForkIdentifier }} application directory"
+- name: "Remove application directory of Forks node {{ forksNodeIdentifier }}"
   become: true
   file: 
     path: "{{ forksNodeApplicationDirectory }}"
     state: absent
 
 
-- name: "Clone {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} repository into source directory"
+- name: "Clone blockchain repository into source directory for Forks node {{ forksNodeIdentifier }}"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   git:
@@ -17,35 +17,17 @@
     force: true
     update: yes
     recursive: yes
-    version: "{{ forksNodeDefaultBranch }}"
+    version: "{{ forksNodeRepositoryBranch }}"
     umask: '0027'
 
 
-  #RESULT: forksNodeCustomInstallerStatResult.stat.exists
-- name: "Check if custom installer script exists for {{ forksNodeForkIdentifier }}"
-  delegate_to: localhost
-  stat:
-    path: "{{ role_path }}/files/installer/{{ forksNodeForkIdentifier }}/install.sh"
-  register: forksNodeCustomInstallerStatResult
-  tags: patches
+  # Custom installer
 
-- name: "Copy {{ forksNodeForkIdentifier }} installer script to installer directory"
+- name: "Replace installer script with custom version for fork {{ forkIdentifier }}"
   when: forksNodeCustomInstallerStatResult.stat.exists
   become: true
   copy:
-    src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
-    dest: "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh"
-    owner: "{{ forksManagingSystemUsername | default('root') }}"
-    group: "{{ forksManagingSystemUsername | default('root') }}"
-    mode: 0750
-    force: true
-  tags: patches
-
-- name: "Replace {{ forksNodeForkIdentifier }} installer script with custom version"
-  when: forksNodeCustomInstallerStatResult.stat.exists
-  become: true
-  copy:
-    src: "installer/{{ forksNodeForkIdentifier }}/install.sh"
+    src: "installer/{{ forkIdentifier }}/install.sh"
     dest: "{{ forksNodeApplicationDirectory }}/install.sh"
     owner: "{{ forksNodeSystemUsername }}"
     group: "{{ forksNodeSystemUsername }}"
@@ -62,7 +44,7 @@
   tags: patches
 
 
-- name: "Add {{ forksNodeForkIdentifier }} user to sudo group"
+- name: "Add system user to sudo group of Forks node {{ forksNodeIdentifier }}"
   become: true
   user:
     name: "{{ forksNodeSystemUsername }}"
@@ -71,7 +53,7 @@
     append: true
 
 
-- name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }}"
+- name: "Install blockchain for Forks node {{ forksNodeIdentifier }}"
   when: forksNodeEnvironmentVariables | length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -79,11 +61,11 @@
   args:
     chdir: "{{ forksNodeApplicationDirectory }}"
     executable: /bin/sh
-  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  async: "{{ (1800 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} being installed"
+- name: "Wait for blockchain being installed of Forks node {{ forksNodeIdentifier }}"
   when: forksNodeEnvironmentVariables | length == 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -91,10 +73,11 @@
     jid: "{{ installBlockchainJob.ansible_job_id }}"
   register: asyncStatusResult
   until: asyncStatusResult.finished
-  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  retries: "{{ (120 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   delay: 15
 
-- name: "Install {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} (additional environment variables)"
+
+- name: "Install blockchain with additional environment variables for Forks node {{ forksNodeIdentifier }}"
   when: forksNodeEnvironmentVariables | length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -103,11 +86,11 @@
     chdir: "{{ forksNodeApplicationDirectory }}"
     executable: /bin/sh
   environment: "{{ forkBuildRequirementsDescriptor.env }}"
-  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  async: "{{ (1800 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   poll: 0
   register: installBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier }} blockchain for {{ forksNodeItem.identifier }} being installed (additional environment variables)"
+- name: "Wait for blockchain being installed with additional environment variables of Forks node {{ forksNodeIdentifier }}"
   when: forksNodeEnvironmentVariables | length > 0
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
@@ -115,18 +98,18 @@
     jid: "{{ installBlockchainJob.ansible_job_id }}"
   register: asyncStatusResult
   until: asyncStatusResult.finished
-  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  retries: "{{ (120 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   delay: 15
 
 
-- name: "Remove {{ forksNodeForkIdentifier }} system user from sudo group"
+- name: "Remove system user from sudo group of Forks node {{ forksNodeIdentifier }}"
   become: true
   command: "deluser {{ forksNodeSystemUsername }} sudo"
 
 
   ## Fix permissions
 
-- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions on mozilla-ca module"
+- name: "Fix ssl permissions on mozilla-ca module for Forks node {{ forksNodeIdentifier }}"
   when: forksNodePermissionsFix
   become: true
   file:
@@ -137,11 +120,11 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: u=rwX,g=rX,o=rX
 
-- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions"
+- name: "Fix ssl permissions of Forks node {{ forksNodeIdentifier }}"
   when: forksNodePermissionsFix
   become: true
   file:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/ssl"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/config/ssl"
     state: directory
     recurse: yes
     owner: "{{ forksNodeSystemUsername }}"
@@ -151,7 +134,7 @@
 
 ## Initialize blockchain
 
-- name: "Initialize {{ forksNodeForkIdentifier }} blockchain"
+- name: "Initialize blockchain of Forks node {{ forksNodeIdentifier }}"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   shell: >
@@ -161,18 +144,18 @@
   args:
     chdir: "{{ forksNodeApplicationDirectory }}"
     executable: /bin/bash
-  async: "{{ (1800 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  async: "{{ (1800 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   poll: 0
   register: initializeBlockchainJob
 
-- name: "Wait for {{ forksNodeForkIdentifier }} blockchain being initialized"
+- name: "Wait for blockchain being initialized of Forks node {{ forksNodeIdentifier }}"
   become: true
   become_user: "{{ forksNodeSystemUsername }}"
   async_status:
     jid: "{{ initializeBlockchainJob.ansible_job_id }}"
   register: asyncStatusResult
   until: asyncStatusResult.finished
-  retries: "{{ (120 * forksJobTimeFactor|default(1))|int }}" # 30 mins * time factor
+  retries: "{{ (120 * forksJobTimeFactor | default(1)) | int }}" # 30 mins * time factor
   delay: 15
 
 
@@ -181,7 +164,7 @@
 #   tags: patches
 
 
-- name: "Fix {{ forksNodeForkIdentifier }} ssl permissions on mozilla-ca module"
+- name: "Fix ssl permissions on mozilla-ca module for Forks node {{ forksNodeIdentifier }}"
   when: forksNodePermissionsFix
   become: true
   file:

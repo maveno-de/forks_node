@@ -1,13 +1,13 @@
 ---
 
 
-- name: "Ensure {{ forksNodeForkIdentifier|capitalize }} system user"
+- name: "Ensure system user for Forks node {{ forksNodeIdentifier }}"
   become: true
   user:
     name: "{{ forksNodeSystemUsername }}"
     home: "{{ forksNodeHomeDirectory }}"
     shell: /bin/bash
-    comment: "{{ forksNodeForkIdentifier|capitalize }}"
+    comment: "Forks node {{ forksNodeIdentifier }}"
     umask: '0027'
 
 - name: Ensure remote temp dir for ansible
@@ -20,7 +20,7 @@
     mode: 0700
 
 
-- name: Ensure .ssh directory for {{ forksNodeForkIdentifier|capitalize }} system user"
+- name: Ensure .ssh directory for Forks node {{ forksNodeIdentifier }}"
   become: true
   file:
     path: "{{ forksNodeHomeDirectory }}/.ssh"
@@ -29,18 +29,19 @@
     group: "{{ forksNodeSystemUsername }}"
     mode: 0700
 
-- name: "Adding SSH public keys to user {{ forksNodeSystemUsername }}"
+- name: "Adding SSH public keys for Forks node {{ forksNodeIdentifier }}"
   when:
     - forksPublicSshKeys is defined
-    - forksPublicSshKeys|length > 0
+    - forksPublicSshKeys | length > 0
   become: true
   authorized_key:
     user: "{{ forksNodeSystemUsername }}"
-    key: "{{ forksPublicSshKeys|map(attribute='sshkey')|join('\n') }}"
+    key: >-
+      {{ forksPublicSshKeys | map(attribute='sshkey') | join('\n') }}
     exclusive: true
 
 
-- name: "Ensure {{ forksNodeForkIdentifier|capitalize }} local directories"
+- name: "Ensure local directories for Forks node {{ forksNodeIdentifier }}"
   become: true
   file:
     path: "{{ forkLocalDirectoryItem }}"

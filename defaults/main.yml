@@ -4,5 +4,7 @@
 forksNodeDebugLevel: 0
 forksDefaultBranch: main
 
+forksNodeSyslogFirstPort: 1515
+
 
 ...

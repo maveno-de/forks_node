@@ -5,11 +5,11 @@ SERVICE_NAME='{{ forksNodeServiceName }}'
 EXECUTABLE_NAME='{{ forksNodeExecutableName }}'
 HOME_DIR="{{ forksNodeHomeDirectory }}"
 APP_DIR="{{ forksNodeApplicationDirectory }}"
-CONFIG_DIR_NAME="{{ forksNodeConfigurationDirectory|basename }}"
-GITHUB_REPO_IDENTIFIER='{{ forksPropertiesLookupTable[forksNodeForkIdentifier]['repository'] }}'
+CONFIG_DIR_NAME="{{ forksNodeConfigurationDirectoryName | basename }}"
+GITHUB_REPO_IDENTIFIER='{{ forksNodeRepositoryIdentifier }}'
 GITHUB_RELEASE_URL="https://api.github.com/repos/${GITHUB_REPO_IDENTIFIER}/releases/latest"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO_IDENTIFIER}.git"
-BRANCH={{ forksNodeDefaultBranch }}
+BRANCH={{ forksNodeRepositoryBranch }}
 
 if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep Loaded: | awk '{print $4}') == 'enabled;' ]]; then
 
@@ -28,8 +28,8 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         rm -rf "${APP_DIR}"
 
         su - "${USER_NAME}" -c "git clone -b $BRANCH ${GITHUB_REPO_URL} ${APP_DIR}"
-        if [[ -f "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh" ]]; then
-          cp "{{ forksInstallerDirectory }}/{{ forksNodeForkIdentifier }}/install.sh" "$APP_DIR"
+        if [[ -f "{{ forksInstallerDirectory }}/{{ forkIdentifier }}/install.sh" ]]; then
+          cp "{{ forksInstallerDirectory }}/{{ forkIdentifier }}/install.sh" "$APP_DIR"
           chown "$USER_NAME:$USER_NAME" "$APP_DIR/install.sh"
         fi
 
@@ -44,8 +44,8 @@ if [[ "${1}" == '--install' ]] || [[ $(systemctl status "${SERVICE_NAME}" | grep
         su - "${USER_NAME}" -c "${EXECUTABLE_NAME} init --fix-ssl-permissions"
 {% endif %}
 
-{#        if [[ -d "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}" ]]; then
-          cp -a "{{ forksPatchDirectory }}/{{ forksNodeForkIdentifier }}/*" "$APP_DIR" 2>/dev/null
+{#        if [[ -d "{{ forksPatchRootDirectory }}/{{ forkIdentifier }}" ]]; then
+          cp -a "{{ forksPatchRootDirectory }}/{{ forkIdentifier }}/*" "$APP_DIR" 2>/dev/null
           chown "$USER_NAME:$USER_NAME" -R "$APP_DIR"
         fi #}
 

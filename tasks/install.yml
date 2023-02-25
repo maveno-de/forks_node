@@ -1,19 +1,32 @@
 ---
 
 
-- name: Build Fork Git nodes
-  when: forksNodeItem.host == inventory_hostname
+  #RESULT: forksNodeCustomInstallerStatResult.stat.exists
+- name: "Check if custom installer script exists for Forks node {{ forksNodeIdentifier }}"
+  delegate_to: localhost
+  stat:
+    path: "{{ role_path }}/files/installer/{{ forkIdentifier }}/install.sh"
+  register: forksNodeCustomInstallerStatResult
+  tags: patches
+
+- name: "Copy installer script to installer directory for fork {{ forkIdentifier }}"
+  when: forksNodeCustomInstallerStatResult.stat.exists
+  become: true
+  copy:
+    src: "installer/{{ forkIdentifier }}/install.sh"
+    dest: "{{ forksInstallerDirectory }}/{{ forkIdentifier }}/install.sh"
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
+    mode: 0750
+    force: true
+  tags: patches
+
+
+- name: "Build Fork Git node {{ forksNodeIdentifier }}"
   include_tasks: build-git.yml
-  loop: >-
-    {{ (forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'undefined')
-    + forksNodesConfiguration
-    | selectattr('host', 'equalto', inventory_hostname)
-    | selectattr('build', 'defined')
-    | selectattr('build', 'equalto', 'git')) }}
+  loop: "{{ forksHostConfiguration }}"
   loop_control:
-    loop_var: forksNodeItem
+    loop_var: forksNodeConfiguration
   tags: patches
 
 

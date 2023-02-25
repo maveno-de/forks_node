@@ -7,13 +7,13 @@
   #  - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'active'
   #  - forksNodeServiceStatusResult['status']['LoadState']|default('') == 'not-found'
   #  - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'inactive'
-- name: "Get Forks node {{ forksNodeItem.identifier }} service status"
+- name: "Get service status of Forks node {{ forksNodeIdentifier }}"
   become: true
   systemd:
     name: "{{ forksNodeServiceName }}.service"
   register: forksNodeServiceStatusResult
 
-- name: "Stop Forks {{ forksNodeItem.identifier }} service"
+- name: "Stop service of Forks node {{ forksNodeIdentifier }}"
   when:
     - forksNodeServiceStatusResult['status']['LoadState']|default('') == 'loaded'
     - forksNodeServiceStatusResult['status']['ActiveState']|default('') == 'active'
@@ -22,19 +22,19 @@
     name: "{{ forksNodeServiceName }}.service"
     state: stopped
 
-#- name: "Let Forks {{ forksNodeItem.identifier }} service shutdown properly"
+#- name: "Let Forks {{ forksNodeIdentifier }} service shutdown properly"
 #  pause:
 #    seconds: 4
 
 
   #RESULT: forksNodeLogFilesFindResult.files
-- name: Find Forks {{ forksNodeItem.identifier }} log files
+- name: "Find log files of Forks node {{ forksNodeIdentifier }}"
   become: true
   find:
-    paths: "{{ forksNodeConfigurationDirectory }}/mainnet/log"
+    paths: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/log"
   register: forksNodeLogFilesFindResult
 
-- name: Remove Forks {{ forksNodeItem.identifier }} log files
+- name: "Remove log files of Forks node {{ forksNodeIdentifier }}"
   become: true
   file:
     path: "{{ forksNodeLogFileItem.path }}"
@@ -44,57 +44,50 @@
     loop_var: forksNodeLogFileItem
 
 
-- name: Unmount Forks {{ forksNodeItem.identifier }} logging directory ram disk
+- name: "Unmount logging directory ram disk of Forks node {{ forksNodeIdentifier }}"
   become: true
   ansible.posix.mount:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/log"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/log"
     state: unmounted
 
-- name: Ensure Forks {{ forksNodeItem.identifier }} logging directory as mount point
+- name: "Ensure logging directory as mount point of Forks node {{ forksNodeIdentifier }}"
   become: true
   file:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/log"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/log"
     state: directory
     owner: "{{ forksNodeSystemUsername }}"
     group: "{{ forksNodeSystemUsername }}"
     mode: 0750
 
-- name: Add Forks {{ forksNodeItem.identifier }} ramdisk for logging to fstab file
+- name: "Add ramdisk for logging to fstab file for Forks node {{ forksNodeIdentifier }}"
   become: true
   vars:
-
-
-
     forksNodeLogRamdiskSize: >-
-      {{ ('node' in forksNodeItem.services
-      or forksPropertiesLookupTable[forksNodeItem.fork]['databaseVersion']
+      {{ ('node' in forksNodeConfiguration.services
+      or forksProperties[forkIdentifier]['databaseVersion']
       | default(2) == 1)
       | ternary('50M', '20M') }}
   lineinfile:
     path: /etc/fstab
     line: >-
-      tmpfs    {{ forksNodeConfigurationDirectory }}/mainnet/log    tmpfs    defaults,nofail,size={{
+      tmpfs    {{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/log    tmpfs    defaults,nofail,size={{
       forksNodeLogRamdiskSize }},uid={{ forksNodeSystemUsername }},gid={{
       forksNodeSystemUsername }},mode=0750    0    0
     state: present
     insertafter: EOF
 
-- name: Mount Forks {{ forksNodeItem.identifier }} ramdisk(s)
-  become: true
-  command: mount -a
 
-
-- name: "Remove logging section from Forks {{ forksNodeItem.identifier }} config"
+- name: "Remove logging section from config of Forks node {{ forksNodeIdentifier }}"
   become: true
   ansible.builtin.blockinfile:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
-    marker: "# {mark} {{ forksNodeItem.identifier }} LOGGING SECTION"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/config/config.yaml"
+    marker: "# {mark} {{ forksNodeIdentifier }} LOGGING SECTION"
     state: absent
 
-- name: "Remove Logging related lines from Forks {{ forksNodeItem.identifier }} config"
+- name: "Remove Logging related lines from config of Forks node {{ forksNodeIdentifier }}"
   become: true
   lineinfile:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/config/config.yaml"
     regexp: >-
       ^.*{{ forksConfigLineItem }}.*$
     state: absent
@@ -115,25 +108,25 @@
     loop_var: forksConfigLineItem
   tags: logging
 
-- name: "Add logging section to Forks {{ forksNodeItem.identifier }} config"
+- name: "Add logging section to config of Forks node {{ forksNodeIdentifier }}"
   become: true
   vars:
     forksNodeLogMaxBytesRotation: >-
-      {{ ('node' in forksNodeItem.services)
+      {{ ('node' in forksNodeConfiguration.services)
       | ternary('16777216', '6291456') }}
   ansible.builtin.blockinfile:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/config/config.yaml"
     insertbefore: BOF
     owner: "{{ forksNodeSystemUsername }}"
     group: "{{ forksNodeSystemUsername }}"
     mode: 0750
-    marker: "# {mark} {{ forksNodeItem.identifier }} LOGGING SECTION"
+    marker: "# {mark} {{ forksNodeIdentifier }} LOGGING SECTION"
     block: |
       logging: &logging
         log_filename: log/debug.log
         log_level: INFO
         log_maxfilesrotation: {{
-      forksPropertiesLookupTable[forksNodeItem.fork]['databaseVersion']
+      forksProperties[forkIdentifier]['databaseVersion']
       | default(2) }}
         log_maxbytesrotation: {{ forksNodeLogMaxBytesRotation }}
         log_stdout: false
@@ -141,10 +134,10 @@
         log_syslog_host: localhost
         log_syslog_port: 514
 
-- name: "Add refs to logging section to Forks {{ forksNodeItem.identifier }} config"
+- name: "Add refs to logging section in config of Forks node {{ forksNodeIdentifier }}"
   become: true
   lineinfile:
-    path: "{{ forksNodeConfigurationDirectory }}/mainnet/config/config.yaml"
+    path: "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/config/config.yaml"
     line: '  logging: *logging #{{ forksConfigLineItem }}'
     insertafter: >-
       ^{{ forksConfigLineItem }}:.*$
@@ -167,7 +160,7 @@
 
 
   #RESULT: forksPromtailConfigFileStatResult.stat.exists
-- name: Check if Promtail Configuration is present
+- name: "Check if Promtail Configuration is present for Forks node {{ forksNodeIdentifier }}"
   become: true
   stat:
     path: /etc/promtail/config.yml
@@ -179,25 +172,23 @@
   become: true
   slurp:
     src: /etc/promtail/config.yml
-  register: configSlurpResult
+  register: promtailConfigSlurpResult
 
-- name: Store modified Promtail config data
+- name: "Store modified Promtail config data for Forks node {{ forksNodeIdentifier }}"
   when:
     - forksPromtailConfigFileStatResult.stat.exists
     - >-
       forksPromtailConfigurationData.scrape_configs
-      | selectattr('job_name', 'equalto', forksNodeItem.identifier)
+      | selectattr('job_name', 'equalto', forksNodeIdentifier)
       | list | length == 0
   become: true
   vars:
-    forksNodeIndex: >-
-      {{ lookup('ansible.utils.index_of', forksNodesConfiguration, 'eq', forksNodeItem) }}
-    forksPromtailConfigurationData: "{{ configSlurpResult['content'] | b64decode | from_yaml }}"
+    forksPromtailConfigurationData: "{{ promtailConfigSlurpResult['content'] | b64decode | from_yaml }}"
     forksPromtailNodeScrapeConfig: >-
-      {'job_name': "{{ forksNodeItem.identifier }}",
+      {'job_name': "{{ forksNodeIdentifier }}",
       'static_configs': [{'targets': ['localhost'],
-      'labels': {'job': "{{ forksNodeItem.fork }}",
-      '__path__': "{{ forksNodeConfigurationDirectory }}/mainnet/log/debug.log",
+      'labels': {'job': "{{ forkIdentifier }}",
+      '__path__': "{{ forksNodeHomeDirectory }}/{{ forksNodeConfigurationDirectoryName }}/mainnet/log/debug.log",
       'host': "{{ inventory_hostname }}",
       'namespace': 'forks' } }]}
     forksPromtailConfigurationModificationData:
@@ -213,7 +204,7 @@
     force: true
 
 
-- name: "Add Promtail to {{ forksNodeItem.identifier }} group"
+- name: "Add Promtail group to system user of Forks node {{ forksNodeIdentifier }}"
   become: true
   user:
     name: promtail

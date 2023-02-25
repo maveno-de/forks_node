@@ -1,0 +1,24 @@
+[Unit]
+Description="Ecostake Farming Node Service"
+After=network.target
+
+[Service]
+Type=forking
+RestartSec=15s
+Restart=always
+User=ecostake
+Group=ecostake
+CPUQuota=180%
+
+WorkingDirectory=/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain
+Environment=PATH=/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain:/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain/venv/bin
+
+Environment=REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+Environment=SSL_CERT_DIR=/etc/ssl/certs
+
+ExecStart=/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain/venv/bin/ecostake start node
+ExecStartPost=/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain/venv/bin/ecostake start harvester
+ExecStop=/var/local/elbwind/lib/ecostake/.local/share/ecostake-blockchain/venv/bin/ecostake stop all -d
+
+[Install]
+WantedBy=multi-user.target
