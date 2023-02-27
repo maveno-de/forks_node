@@ -235,4 +235,19 @@
   tags: aliases
 
 
+- name: Setup Plot Transporter
+  when:
+    - forksHostPlottingTargetDirectory is defined
+    - forksHostPlotDirectories[forkIdentifier] | default([])
+  vars:
+    forksUtilsContextTransporterSourceDirectory: >-
+      {{ forksHostPlottingTargetDirectory | default('undefined') }}
+    forksUtilsContextTransporterTargetDirectories: >-
+      {{ forksHostPlotDirectories[forkIdentifier] | default([]) }}
+  include_role:
+    name: maveno_de.forks.utilities
+    tasks_from: setupPlotTransporter
+  tags: transporter
+
+
 ...
