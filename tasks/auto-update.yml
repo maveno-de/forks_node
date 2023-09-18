@@ -1,0 +1,60 @@
+---
+
+
+- name: "Generate auto-update script for Forks node {{ forksNodeIdentifier }}"
+  when:
+    - "'updateHour' in forksSettings[forkIdentifier].keys()"
+    - "'updateMinute' in forksSettings[forkIdentifier].keys()"
+  become: true
+  template:
+    src: update-git.sh.j2
+    dest: "{{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh"
+    force: true
+    owner: "{{ forksManagingSystemUsername | default('root') }}"
+    group: "{{ forksManagingSystemUsername | default('root') }}"
+    mode: 0750
+  tags: updates
+
+
+- name: "Setup auto-update cronjob for Forks node {{ forksNodeIdentifier }}"
+  when:
+    - whichCrontabCommandResult.rc == 0
+    - "'updateHour' in forksSettings[forkIdentifier].keys()"
+    - "'updateMinute' in forksSettings[forkIdentifier].keys()"
+  become: true
+  cron:
+    name: "{{ forksNodeIdentifier }} daily auto-update"
+    user: "{{ forksManagingSystemUsername | default('root') }}"
+    hour: "{{ forksSettings[forkIdentifier]['updateHour'] | default('undefined') | string }}"
+    minute: "{{ forksSettings[forkIdentifier]['updateMinute'] | default('undefined') | string }}"
+    job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh 1>/dev/null 2>&1"
+  tags: updates
+
+
+- name: "Generate auto-update service file for Forks node {{ forksNodeIdentifier }}"
+  when: whichCrontabCommandResult.rc != 0
+  become: true
+  template:
+    src: auto-update.service.j2
+    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeIdentifier }}-update.service"
+    mode: 0644
+
+- name: "Generate auto-update timer file for Forks node {{ forksNodeIdentifier }}"
+  when: whichCrontabCommandResult.rc != 0
+  become: true
+  template:
+    src: auto-update.timer.j2
+    dest: "{{ forksSystemServiceDirectory }}/{{ forksNodeIdentifier }}-update.timer"
+    mode: 0644
+
+
+- name: "Enable auto-update timer for Forks node {{ forksNodeIdentifier }}"
+  when: whichCrontabCommandResult.rc != 0
+  become: true
+  systemd:
+    name: "{{ forksNodeIdentifier }}-update.timer"
+    daemon-reload: true
+    enabled: true
+
+
+...

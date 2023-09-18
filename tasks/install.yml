@@ -2,7 +2,7 @@
 
 
   #RESULT: forksNodeCustomInstallerStatResult.stat.exists
-- name: "Check if custom installer script exists for Forks node {{ forksNodeIdentifier }}"
+- name: "Check if custom installer script exists for Forks node of type {{ forkIdentifier }}"
   delegate_to: localhost
   stat:
     path: "{{ role_path }}/files/installer/{{ forkIdentifier }}/install.sh"
@@ -22,7 +22,7 @@
   tags: patches
 
 
-- name: "Build Fork Git node {{ forksNodeIdentifier }}"
+- name: "Build Fork Git node of type {{ forkIdentifier }}"
   include_tasks: build-git.yml
   loop: "{{ forksHostConfiguration }}"
   loop_control:

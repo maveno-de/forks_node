@@ -1,0 +1,11 @@
+[Unit]
+Description=Auto-update for Forks node {{ forksNodeIdentifier }}
+
+[Service]
+Type=oneshot
+Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
+Environment=SSL_CERT_DIR=/etc/ssl/certs
+ExecStart={{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh
+
+[Install]
+WantedBy=multi-user.target

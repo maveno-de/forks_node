@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily backup for Forks node {{ forksNodeIdentifier }}
+
+[Service]
+Type=oneshot
+Environment=REQUESTS_CA_BUNDLE={{ forksSystemCaCertificatesFilePath }}
+Environment=SSL_CERT_DIR=/etc/ssl/certs
+ExecStart={{ forksManagingHomeDirectory | default('/root') }}/.local/bin/backup-{{ forksNodeIdentifier }}.sh
+
+[Install]
+WantedBy=multi-user.target

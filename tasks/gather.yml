@@ -1,0 +1,13 @@
+---
+
+  # RESULT exists: whichCrontabCommandResult.rc == 0
+  # RESULT path: whichCrontabCommandResult.stdout
+- name: Search for crontab executable
+  become: true
+  command: which crontab
+  register: whichCrontabCommandResult
+  changed_when: false
+  failed_when: false
+
+
+...

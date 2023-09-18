@@ -1,0 +1,11 @@
+[Unit]
+Description=Auto-update timer for Forks node {{ forksNodeIdentifier }}
+
+[Timer]
+Unit={{ forksNodeIdentifier }}-update.service
+OnCalendar=*-*-* {{ "%02d" | format(forksSettings[forkIdentifier]['updateHour']
+| default('undefined')) }}:{{ "%02d" | format(forksSettings[forkIdentifier]['updateMinute']
+| default('undefined')) }}:00
+
+[Install]
+WantedBy=timers.target

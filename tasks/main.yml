@@ -1,6 +1,14 @@
 ---
 
 
+- name: Gather information for Chia forks installation
+  include_tasks: gather.yml
+
+
+- name: Stop tunnels
+  include_tasks: stop-tunnels.yml
+  tags: tunnels
+
 - name: Prepare Chia forks installation
   include_tasks: prepare.yml
   tags:

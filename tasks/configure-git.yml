@@ -82,6 +82,7 @@
   # Cronjobs
 
 - name: "Adds paths to CA certs to crontab of Forks node {{ forksNodeIdentifier }}"
+  when: whichCrontabCommandResult.rc == 0
   become: true
   cron:
     name: REQUESTS_CA_BUNDLE
@@ -90,6 +91,7 @@
     job: "{{ forksSystemCaCertificatesFilePath }}"
 
 - name: "Adds certs path to crontab of Forks node {{ forksNodeIdentifier }}"
+  when: whichCrontabCommandResult.rc == 0
   become: true
   cron:
     name: SSL_CERT_DIR
@@ -98,34 +100,9 @@
     job: /etc/ssl/certs
 
 
-  # Auto-updates
-
-- name: "Generate auto-update script for Forks node {{ forksNodeIdentifier }}"
-  when:
-    - "'updateHour' in forksSettings[forkIdentifier].keys()"
-    - "'updateMinute' in forksSettings[forkIdentifier].keys()"
-  become: true
-  template:
-    src: update-git.sh.j2
-    dest: "{{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh"
-    force: true
-    owner: "{{ forksManagingSystemUsername | default('root') }}"
-    group: "{{ forksManagingSystemUsername | default('root') }}"
-    mode: 0750
-  tags: updates
-
-- name: "Setup auto-update cronjob for Forks node {{ forksNodeIdentifier }}"
-  when:
-    - "'updateHour' in forksSettings[forkIdentifier].keys()"
-    - "'updateMinute' in forksSettings[forkIdentifier].keys()"
-  become: true
-  cron:
-    name: "{{ forksNodeIdentifier }} daily auto-update"
-    user: "{{ forksManagingSystemUsername | default('root') }}"
-    hour: "{{ forksSettings[forkIdentifier]['updateHour'] | default('undefined') | string }}"
-    minute: "{{ forksSettings[forkIdentifier]['updateMinute'] | default('undefined') |string }}"
-    job: "sudo {{ forksManagingLocalBinaryDirectory }}/update-{{ forksNodeIdentifier }}.sh 1>/dev/null 2>&1"
-  tags: updates
+- name: "Setup auto-update for Forks node {{ forksNodeIdentifier }}"
+  include_tasks: auto-update.yml
+  tags: always
 
 
 - name: "Generate service file for Forks node {{ forksNodeIdentifier }}"
@@ -164,55 +141,10 @@
     proto: tcp
 
 
-  # Daily backup
-
-- name: "Create local cache directory for Forks node {{ forksNodeIdentifier }}"
-  when:
-    - forksBackupDataDirectory is defined
-    - "'node' in forksNodeConfiguration.services"
-    - "'backupHour' in forksSettings[forkIdentifier].keys()"
-    - "'backupMinute' in forksSettings[forkIdentifier].keys()"
-  become: true
-  file:
-    path: "{{ forksNodeHomeDirectory }}/.local/forks/cache"
-    state: directory
-    owner: "{{ forksNodeSystemUsername }}"
-    group: "{{ forksNodeSystemUsername }}"
-    mode: 0750
+- name: "Setup daily backups for Forks node {{ forksNodeIdentifier }}"
+  include_tasks: daily-backup.yml
   tags: backups
 
-- name: "Generate backup scripts for Forks node {{ forksNodeIdentifier }}"
-  when:
-    - forksBackupDataDirectory is defined
-    - "'node' in forksNodeConfiguration.services"
-    - "'backupHour' in forksSettings[forkIdentifier].keys()"
-    - "'backupMinute' in forksSettings[forkIdentifier].keys()"
-  become: true
-  template:
-    src: backup-git.sh.j2
-    dest: "{{ forksManagingHomeDirectory | default('/root') }}/.local/bin/backup-{{ forksNodeIdentifier }}.sh"
-    force: true
-    owner: "{{ forksManagingSystemUsername | default('root') }}"
-    group: "{{ forksManagingSystemUsername | default('root') }}"
-    mode: 0755
-  tags: backups
-
-- name: "Setup blockchain backup cronjob for Forks node {{ forksNodeIdentifier }}"
-  when:
-    - forksBackupDataDirectory is defined
-    - "'node' in forksNodeConfiguration.services"
-    - "'backupHour' in forksSettings[forkIdentifier].keys()"
-    - "'backupMinute' in forksSettings[forkIdentifier].keys()"
-  become: true
-  cron:
-    name: "{{ forksNodeIdentifier }} daily backup"
-    user: "{{ forksManagingSystemUsername | default('root') }}"
-    hour: "{{ forksSettings[forkIdentifier]['backupHour'] | default('undefined') }}"
-    minute: "{{ forksSettings[forkIdentifier]['backupMinute'] | default('undefined') }}"
-    job: >-
-      sudo {{ forksManagingHomeDirectory | default('/root') }}/.local/bin/backup-{{ forksNodeIdentifier }}.sh
-      >> {{ forksLoggingDirectory }}/{{ forksNodeIdentifier }}_daily_backup.log
-  tags: backups
 
 # Aliases
 

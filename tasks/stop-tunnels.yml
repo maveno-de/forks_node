@@ -1,0 +1,14 @@
+---
+
+
+- name: Stop Forks Tunnels
+  when: "'tunnels' in forksNodeConfiguration"
+  vars:
+    forksTunnelContextTunnelState: stopped
+  include_tasks: tunnels.yml
+  loop: "{{ forksHostConfiguration }}"
+  loop_control:
+    loop_var: forksNodeConfiguration
+  tags: tunnels
+
+...

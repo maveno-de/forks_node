@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily backup timer for Forks node {{ forksNodeIdentifier }}
+
+[Timer]
+Unit={{ forksNodeIdentifier }}-backup.service
+OnCalendar=*-*-* {{ "%02d" | format(forksSettings[forkIdentifier]['backupHour']
+| default('undefined')) }}:{{ "%02d" | format(forksSettings[forkIdentifier]['backupMinute']
+| default('undefined')) }}:00
+
+[Install]
+WantedBy=timers.target
